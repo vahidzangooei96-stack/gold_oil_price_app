@@ -1,0 +1,80 @@
+name: Build APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Flutter (stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      # پروژه فقط شامل lib/ و pubspec است؛ پوشه‌های پلتفرمی تولید می‌شوند
+      - name: Generate platform folders
+        run: flutter create . --project-name gold_oil_price
+
+      # مجوز اینترنت برای نسخه Release + نام نمایشی فارسی اپ
+      - name: Configure Android manifest
+        run: |
+          MANIFEST=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.INTERNET' "$MANIFEST" || \
+            sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' "$MANIFEST"
+          sed -i 's#android:label="gold_oil_price"#android:label="قیمت طلا و نفت"#' "$MANIFEST"
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      - name: Prepare APK file
+        run: |
+          mkdir -p apk
+          cp build/app/outputs/flutter-apk/app-release.apk apk/Gold-Oil-Price.apk
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Gold-Oil-Price-APK
+          path: apk/Gold-Oil-Price.apk
+
+      # ساخت/به‌روزرسانی Release با تگ latest؛ لینک دانلود همیشه ثابت می‌ماند:
+      # https://github.com/vahidzangooei96-stack/gold_oil_price_app/releases/latest/download/Gold-Oil-Price.apk
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest apk/Gold-Oil-Price.apk \
+            --title "اپ قیمت طلا و نفت — نسخه ۱.۰ (اندروید)" \
+            --notes "نحوه نصب روی گوشی اندروید:
+
+          1. فایل Gold-Oil-Price.apk را دانلود کنید.
+          2. روی فایل بزنید؛ اگر پرسید، اجازه «نصب از منابع ناشناس» را بدهید.
+          3. اپ را باز کنید — قیمت انس طلا و نفت برنت هر ۳۰ ثانیه خودکار بروزرسانی می‌شود.
+
+          مشخصات:
+          - Material 3 با حالت روشن و تاریک
+          - فونت فارسی وزیرمتن و ارقام فارسی
+          - آپدیت خودکار هر ۳۰ ثانیه + رفرش دستی" \
+            --latest
