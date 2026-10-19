@@ -157,8 +157,14 @@ void main() {
     };
 
     final TgjuSource source = TgjuSource(
-      client: MockClient((http.Request request) async =>
-          http.Response(jsonEncode(payload), 200)),
+      client: MockClient((http.Request request) async => http.Response(
+            jsonEncode(payload),
+            200,
+            // بدون این هدر، http بدنه را latin1 انکود می‌کند و متن فارسی می‌شکند
+            headers: <String, String>{
+              'content-type': 'application/json; charset=utf-8'
+            },
+          )),
     );
 
     final MarketSnapshot snapshot = await source.fetchSnapshot();
@@ -228,8 +234,13 @@ void main() {
     };
 
     final TgjuSource source = TgjuSource(
-      client: MockClient((http.Request request) async =>
-          http.Response(jsonEncode(payload), 200)),
+      client: MockClient((http.Request request) async => http.Response(
+            jsonEncode(payload),
+            200,
+            headers: <String, String>{
+              'content-type': 'application/json; charset=utf-8'
+            },
+          )),
     );
 
     final MarketSnapshot snapshot = await source.fetchSnapshot();
