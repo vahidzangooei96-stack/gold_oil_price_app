@@ -41,6 +41,16 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # قبول همه مجوزهای SDK — بدون این، sdkmanager وسط بیلد شکست می‌خورد
+      - name: Accept Android SDK licenses
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      # نصب صریح NDK مورد نیاز قالب Flutter (r28c) تا بیلد قطعی شود
+      - name: Pre-install Android NDK
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;28.2.13676358" > /dev/null 2>&1 \
+            || echo "NDK pre-install failed; Gradle will try again"
+
       - name: Run tests
         run: flutter test
 
