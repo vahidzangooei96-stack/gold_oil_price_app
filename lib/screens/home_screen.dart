@@ -7,11 +7,12 @@ import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/price_card.dart';
+import '../widgets/source_sheet.dart';
 import '../widgets/status_views.dart';
 
-/// صفحه اصلی لوکس «امپراتوری طلا و نفت»:
-/// بنر نشان شیر طلایی + بخش‌های بازار جهانی، نفت و بازار ایران
-/// تمام متن‌ها فارسی است.
+/// صفحه اصلی «پلنگ صورتی»:
+/// بنر پلنگ صورتی + بخش‌های بازار جهانی، نفت و بازار ایران
+/// + دکمه تغییر منبع داده — تمام متن‌ها فارسی است.
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -21,15 +22,21 @@ class HomeScreen extends StatelessWidget {
     final ThemeProvider themeProvider = context.watch<ThemeProvider>();
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // رنگ متن روی پس‌زمینه: عاج در تاریک، برنز در روشن
-    final Color onBg = isDark ? AppTheme.ivory : AppTheme.bronzeDark;
+    // رنگ متن روی پس‌زمینه: گل‌بهی در تاریک، آلویی در روشن
+    final Color onBg = isDark ? AppTheme.roseWhite : AppTheme.plumDark;
 
     return Scaffold(
-      // پس‌زمینه و AppBar شفاف تا گرادیان لوکس دیده شود
+      // پس‌زمینه و AppBar شفاف تا گرادیان صورتی دیده شود
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         actions: <Widget>[
+          // تغییر منبع داده (API ایرانی منتخب کاربر)
+          IconButton(
+            tooltip: 'تغییر منبع داده',
+            onPressed: () => showSourceSheet(context, prices),
+            icon: Icon(Icons.swap_horiz, color: onBg),
+          ),
           // سوییچ پوسته: سیستم / تاریک / روشن
           IconButton(
             tooltip: themeProvider.tooltip,
@@ -61,7 +68,7 @@ class HomeScreen extends StatelessWidget {
         child: SafeArea(
           top: true,
           child: RefreshIndicator(
-            color: AppTheme.gold,
+            color: AppTheme.pink,
             onRefresh: () => prices.fetchAll(showLoading: false),
             child: LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
@@ -92,13 +99,13 @@ class HomeScreen extends StatelessWidget {
     }
 
     // ۳) گروه‌بندی ردیف‌ها برای بخش‌های صفحه
-    final List<TalaPrice> globalItems = prices.items
-        .where((TalaPrice r) => r.group == 'global')
+    final List<PriceRow> globalItems = prices.items
+        .where((PriceRow r) => r.group == 'global')
         .toList();
-    final List<TalaPrice> oilItems =
-        prices.items.where((TalaPrice r) => r.group == 'oil').toList();
-    final List<TalaPrice> iranItems =
-        prices.items.where((TalaPrice r) => r.group == 'iran').toList();
+    final List<PriceRow> oilItems =
+        prices.items.where((PriceRow r) => r.group == 'oil').toList();
+    final List<PriceRow> iranItems =
+        prices.items.where((PriceRow r) => r.group == 'iran').toList();
 
     // ۴) نمایش داده‌ها — در نمایشگر عریض دو ستونه می‌شود
     final bool isWide = constraints.maxWidth >= 700;
@@ -109,7 +116,45 @@ class HomeScreen extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
           children: <Widget>[
-            _buildLuxuryBanner(context),
+            _buildPantherBanner(context),
+
+            const SizedBox(height: 12),
+
+            // نشان منبع داده فعال — با لمس، شیت تغییر منبع باز می‌شود
+            Center(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => showSourceSheet(context, prices),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.pink.withOpacity(0.10),
+                    borderRadius: BorderRadius.circular(999),
+                    border:
+                        Border.all(color: AppTheme.pink.withOpacity(0.45)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Icon(Icons.swap_horiz,
+                          size: 16, color: isDark ? AppTheme.pinkLight : AppTheme.pink),
+                      const SizedBox(width: 6),
+                      Text(
+                        'منبع داده: ${prices.sourceName}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: onBg,
+                        ),
+                      ),
+                      Icon(Icons.keyboard_arrow_down,
+                          size: 18, color: onBg.withOpacity(0.6)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 16),
 
@@ -167,7 +212,7 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // تحلیل لحظه‌ای بازار (مثل خط «نگاه بازار» در طرح‌های لوکس)
+            // تحلیل لحظه‌ای بازار
             if (_insight(prices) != null)
               _buildInsight(context, _insight(prices)!, onBg),
 
@@ -177,7 +222,7 @@ class HomeScreen extends StatelessWidget {
             _buildFreshnessPanel(prices, onBg),
             const SizedBox(height: 8),
             Text(
-              'بروزرسانی خودکار هر ۳۰ ثانیه — منابع: tala.ir و یاهو فایننس',
+              'بروزرسانی خودکار هر ۳۰ ثانیه — منبع: ${prices.sourceName} + نفت جهانی از یاهو',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -192,24 +237,24 @@ class HomeScreen extends StatelessWidget {
   }
 
   /// ساخت کارت‌های قیمت از ردیف‌های داده
-  List<Widget> _cards(List<TalaPrice> rows) {
-    return rows.map((TalaPrice r) => PriceCard(price: r)).toList();
+  List<Widget> _cards(List<PriceRow> rows) {
+    return rows.map((PriceRow r) => PriceCard(price: r)).toList();
   }
 
-  /// بنر لوکس: نشان شیر طلایی + عنوان و شعار کاملاً فارسی
-  Widget _buildLuxuryBanner(BuildContext context) {
+  /// بنر پلنگ صورتی: کاراکتر پلنگ + سکه طلا و بشکه نفت + عنوان فارسی
+  Widget _buildPantherBanner(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(24),
       child: Stack(
         fit: StackFit.passthrough,
         children: <Widget>[
           Image.asset(
-            'assets/images/lion_crest.jpg',
+            'assets/images/pink_panther.jpg',
             height: 200,
             width: double.infinity,
             fit: BoxFit.cover,
           ),
-          // لایه تیره پایین بنر برای خوانایی متن طلایی
+          // لایه تیره پایین بنر برای خوانایی متن صورتی
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -218,46 +263,46 @@ class HomeScreen extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: <Color>[
                     Colors.transparent,
-                    Colors.black.withOpacity(0.72),
+                    const Color(0xFF1A0A13).withOpacity(0.85),
                   ],
-                  stops: const <double>[0.40, 1.0],
+                  stops: const <double>[0.42, 1.0],
                 ),
               ),
             ),
           ),
-          // قاب خط طلایی دور بنر
+          // قاب خط صورتی دور بنر
           Positioned.fill(
             child: Container(
               margin: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppTheme.gold.withOpacity(0.55)),
+                border: Border.all(color: AppTheme.pink.withOpacity(0.6)),
               ),
             ),
           ),
-          Positioned(
+          const Positioned(
             right: 18,
             bottom: 14,
             left: 18,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                const Text(
-                  'امپراتوری طلا و نفت',
+                Text(
+                  'قیمت لحظه‌ای طلا و نفت',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppTheme.goldLight,
+                    color: AppTheme.pinkLight,
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Text(
-                  'مالی · قدرت · احترام',
+                  'پلنگ صورتی · سریع · شیک · همیشه بروز',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppTheme.ivory.withOpacity(0.85),
+                    color: AppTheme.roseWhite,
                     fontSize: 12,
                     letterSpacing: 2,
                   ),
@@ -283,7 +328,7 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // سرصفحه: آیکون طلایی + عنوان + خط طلایی
+        // سرصفحه: آیکون صورتی + عنوان + خط صورتی
         Row(
           children: <Widget>[
             Container(
@@ -292,14 +337,14 @@ class HomeScreen extends StatelessWidget {
                 gradient: const LinearGradient(
                   begin: Alignment.topRight,
                   end: Alignment.bottomLeft,
-                  colors: AppTheme.goldGradient,
+                  colors: AppTheme.pinkGradient,
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 icon,
                 size: 18,
-                color: const Color(0xFF14110B),
+                color: const Color(0xFF2B0A1B),
               ),
             ),
             const SizedBox(width: 10),
@@ -331,8 +376,8 @@ class HomeScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: <Color>[
-                      AppTheme.gold.withOpacity(0.6),
-                      AppTheme.gold.withOpacity(0.0),
+                      AppTheme.pink.withOpacity(0.6),
+                      AppTheme.pink.withOpacity(0.0),
                     ],
                   ),
                 ),
@@ -392,9 +437,9 @@ class HomeScreen extends StatelessWidget {
 
   /// تحلیل خودکار بازار بر اساس جهت تغییرها — کاملاً فارسی
   String? _insight(PricesProvider prices) {
-    TalaPrice? gold;
-    TalaPrice? oil;
-    for (final TalaPrice r in prices.items) {
+    PriceRow? gold;
+    PriceRow? oil;
+    for (final PriceRow r in prices.items) {
       if (gold == null && r.title.contains('اونس')) gold = r;
       if (oil == null && r.title.contains('برنت')) oil = r;
     }
@@ -405,7 +450,7 @@ class HomeScreen extends StatelessWidget {
     final bool? oilUp = oil?.isUp;
 
     if (goldUp == true && oilUp == true) {
-      return 'طلا و نفت هم‌زمان صعودی‌اند — بازار در انتظار یک رویداد بزرگ است.';
+      return 'طلا و نفت هم‌زمان صعودی‌اند — پلنگ گوش‌هایش را تیز کرده؛ بازار داغ است!';
     }
     if (goldUp == true && oilUp == false) {
       return 'طلا صعودی و نفت نزولی — پناهگاه امن، قدرت را حفظ کرده است.';
@@ -414,24 +459,24 @@ class HomeScreen extends StatelessWidget {
       return 'نفت پیشتاز شده و طلا عقب‌نشینی می‌کند — پول به سوی انرژی می‌رود.';
     }
     if (goldUp == false && oilUp == false) {
-      return 'طلا و نفت هر دو نزولی‌اند — بازار نفس تازه می‌کند؛ صبر، هنر بزرگان است.';
+      return 'طلا و نفت هر دو نزولی‌اند — بازار نفس تازه می‌کند؛ صبر، هنر پلنگ است.';
     }
     return 'بازار امروز آرام است — قیمت‌ها در محدوده باریکی نوسان می‌کنند.';
   }
 
-  /// جعبه تحلیل بازار با قاب طلایی
+  /// جعبه تحلیل بازار با قاب صورتی
   Widget _buildInsight(BuildContext context, String text, Color onBg) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppTheme.gold.withOpacity(0.08),
+        color: AppTheme.pink.withOpacity(0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.4)),
+        border: Border.all(color: AppTheme.pink.withOpacity(0.4)),
       ),
       child: Row(
         children: <Widget>[
-          Icon(Icons.auto_awesome, size: 18, color: AppTheme.gold),
+          Icon(Icons.auto_awesome, size: 18, color: AppTheme.pink),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -462,9 +507,9 @@ class HomeScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: AppTheme.gold.withOpacity(0.07),
+        color: AppTheme.pink.withOpacity(0.07),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.3)),
+        border: Border.all(color: AppTheme.pink.withOpacity(0.3)),
       ),
       child: Column(
         children: <Widget>[
@@ -508,7 +553,7 @@ class HomeScreen extends StatelessWidget {
               minHeight: 5,
               backgroundColor: onBg.withOpacity(0.15),
               valueColor: AlwaysStoppedAnimation<Color>(
-                fresh ? AppTheme.gold : Colors.orangeAccent,
+                fresh ? AppTheme.pink : Colors.orangeAccent,
               ),
             ),
           ),

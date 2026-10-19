@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../models/price_models.dart';
 import '../theme/app_theme.dart';
 
-/// کارت لوکس نمایش قیمت — قاب طلایی روی مشکی امپراتوری
+/// کارت نمایش قیمت — قاب صورتی پلنگ روی بادمجانی تیره
 class PriceCard extends StatelessWidget {
   const PriceCard({super.key, required this.price});
 
-  final TalaPrice price;
+  final PriceRow price;
 
   @override
   Widget build(BuildContext context) {
@@ -15,9 +15,9 @@ class PriceCard extends StatelessWidget {
     final bool isDark = theme.brightness == Brightness.dark;
 
     // رنگ‌های متن روی کارت
-    final Color valueColor = isDark ? AppTheme.goldLight : AppTheme.bronzeDark;
+    final Color valueColor = isDark ? AppTheme.pinkLight : AppTheme.plumDark;
     final Color titleColor =
-        isDark ? AppTheme.ivory.withOpacity(0.92) : AppTheme.bronzeDark;
+        isDark ? AppTheme.roseWhite.withOpacity(0.92) : AppTheme.plumDark;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
@@ -26,15 +26,15 @@ class PriceCard extends StatelessWidget {
             ? const LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: <Color>[Color(0xFF1C170D), Color(0xFF131009)],
+                colors: <Color>[Color(0xFF2A1120), Color(0xFF1D0B16)],
               )
             : const LinearGradient(
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
-                colors: <Color>[AppTheme.cardLight, Color(0xFFF7EFDC)],
+                colors: <Color>[AppTheme.cardLight, Color(0xFFFBE4EF)],
               ),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.gold.withOpacity(0.55), width: 1),
+        border: Border.all(color: AppTheme.pink.withOpacity(0.55), width: 1),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: Colors.black.withOpacity(isDark ? 0.45 : 0.10),
@@ -47,7 +47,7 @@ class PriceCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // ── ردیف بالا: نشان سکه طلایی + عنوان + نشان تغییر ──
+          // ── ردیف بالا: نشان پنجه صورتی + عنوان + نشان تغییر ──
           Row(
             children: <Widget>[
               Container(
@@ -56,13 +56,13 @@ class PriceCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
-                    colors: AppTheme.goldGradient,
+                    colors: AppTheme.pinkGradient,
                   ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.workspace_premium_outlined,
-                  color: isDark ? const Color(0xFF14110B) : Colors.white,
+                  color: isDark ? const Color(0xFF2B0A1B) : Colors.white,
                   size: 15,
                 ),
               ),
@@ -81,7 +81,7 @@ class PriceCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
 
-          // ── قیمت با فونت بزرگ طلایی ──
+          // ── قیمت با فونت بزرگ ──
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,

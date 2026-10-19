@@ -4,18 +4,10 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
-import '../models/price_models.dart';
-import '../utils/formatters.dart';
-
-/// خطای سطح اپلیکیشن همراه با پیام فارسی، آماده برای نمایش به کاربر
-class ApiException implements Exception {
-  const ApiException(this.message);
-
-  final String message;
-
-  @override
-  String toString() => message;
-}
+import '../api_exception.dart';
+import '../../models/price_models.dart';
+import '../../utils/formatters.dart';
+import 'market_source.dart';
 
 /// پیکربندی یک ردیف قیمت: از کدام بخش و کلید JSON بخوانیم و چه نامی بگذاریم
 class PriceRowConfig {
@@ -36,15 +28,24 @@ class PriceRowConfig {
   final String group;
 }
 
-/// سرویس دریافت قیمت‌ها از سایت طلا (tala.ir)
+/// منبع داده «تالا» — endpoint رسمی AJAX صفحه اصلی tala.ir
 ///
-/// منبع داده، همان endpoint رسمی AJAX صفحه اصلی سایت است:
-/// https://www.tala.ir/ajax/price
-/// که خود صفحه اصلی tala.ir نیز قیمت‌هایش را از همین‌جا پر می‌کند.
-class TalaService {
-  TalaService({http.Client? client}) : _client = client ?? http.Client();
+/// همان چیزی که خود صفحه اصلی tala.ir قیمت‌هایش را از آن پر می‌کند:
+/// https://www.tala.ir/ajax/price  — بدون نیاز به کلید
+class TalaSource extends MarketSource {
+  TalaSource({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
+
+  @override
+  String get id => 'tala';
+
+  @override
+  String get displayName => 'تالا';
+
+  @override
+  String get description =>
+      'قیمت‌های لحظه‌ای tala.ir — طلا، سکه، ارز و فلزات؛ سریع و بدون کلید';
 
   /// حداکثر زمان انتظار برای درخواست
   static const Duration _timeout = Duration(seconds: 15);
@@ -61,12 +62,11 @@ class TalaService {
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
     'User-Agent':
-        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldPriceApp/1.2',
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldPriceApp/1.3',
   };
 
   /// ساخت آدرس درخواست با پارامتر کش‌باستر متغیر در هر لحظه؛
-  /// این کار مطمئن می‌شود همیشه تازه‌ترین داده از سرور اصلی tala.ir
-  /// دریافت می‌شود، نه پاسخ کش‌شده‌ی مسیرهای میانی.
+  /// تضمین می‌شود همیشه تازه‌ترین داده از سرور اصلی دریافت شود.
   static Uri _freshUri() {
     final int bust = DateTime.now().millisecondsSinceEpoch;
     return Uri.parse('$_priceUrl?_=$bust');
@@ -93,11 +93,11 @@ class TalaService {
         group: 'oil'),
   ];
 
-  /// دریافت همه قیمت‌ها در یک درخواست
-  Future<TalaSnapshot> fetchPrices() async {
+  @override
+  Future<MarketSnapshot> fetchSnapshot() async {
     final Map<String, dynamic> data = await _getJson(_freshUri());
 
-    final List<TalaPrice> rows = <TalaPrice>[];
+    final List<PriceRow> rows = <PriceRow>[];
     String? jdate;
     int? feedTimeMs; // بزرگ‌ترین m یعنی تازه‌ترین مُهر زمانی داده سرور
 
@@ -115,7 +115,7 @@ class TalaService {
         feedTimeMs = (feedTimeMs == null || ms > feedTimeMs) ? ms : feedTimeMs;
       }
 
-      rows.add(TalaPrice(
+      rows.add(PriceRow(
         title: cfg.title,
         value: _formatValue(item),
         unit: cfg.unit,
@@ -129,14 +129,14 @@ class TalaService {
       throw const ApiException('قیمتی در پاسخ سرور یافت نشد.');
     }
 
-    return TalaSnapshot(
+    return MarketSnapshot(
       items: rows,
       jdate: jdate,
       feedTimeMs: feedTimeMs,
     );
   }
 
-  /// آزادسازی منابع شبکه
+  @override
   void dispose() => _client.close();
 
   // ─────────────────────────── Internal ───────────────────────────

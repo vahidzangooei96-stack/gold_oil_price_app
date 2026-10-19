@@ -36,7 +36,7 @@ jobs:
           MANIFEST=android/app/src/main/AndroidManifest.xml
           grep -q 'android.permission.INTERNET' "$MANIFEST" || \
             sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' "$MANIFEST"
-          sed -i 's#android:label="gold_oil_price"#android:label="امپراتوری طلا و نفت"#' "$MANIFEST"
+          sed -i 's#android:label="gold_oil_price"#android:label="قیمت طلا و نفت — پلنگ صورتی"#' "$MANIFEST"
 
       - name: Install dependencies
         run: flutter pub get
@@ -76,15 +76,23 @@ jobs:
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest apk/Gold-Oil-Price.apk \
-            --title "امپراتوری طلا و نفت — نسخه ۱.۲ (اندروید)" \
+            --title "پلنگ صورتی — نسخه ۱.۳ (اندروید)" \
             --notes "نحوه نصب روی گوشی اندروید:
 
           1. فایل Gold-Oil-Price.apk را دانلود کنید.
           2. روی فایل بزنید؛ اگر پرسید، اجازه «نصب از منابع ناشناس» را بدهید.
-          3. اپ را باز کنید — قیمت‌های tala.ir و یاهو فایننس هر ۳۰ ثانیه خودکار بروزرسانی می‌شوند.
+          3. اپ را باز کنید — قیمت‌ها هر ۳۰ ثانیه خودکار بروزرسانی می‌شوند.
+
+          تازه‌های نسخه ۱.۳:
+          - تم جدید «پلنگ صورتی» — صورتی براق با بنر کارتونی جدید
+          - تغییر منبع داده توسط کاربر: تالا، TGJU و API رسمی api.tala.ir
+          - API رسمی تالا با کلید API شخصی شما (از api.tala.ir بگیرید و در اپ وارد کنید)
+          - TGJU بدون کلید: طلا ۱۸ و ۲۴ عیار، مثقال، سکه‌ها، دلار، یورو، انس، نقره و برنت
+          - انتخاب منبع در حافظه گوشی ذخیره می‌شود
 
           مشخصات:
           - Material 3 با حالت روشن و تاریک
           - فونت فارسی وزیرمتن و ارقام فارسی
+          - نفت جهانی (برنت و WTI) از یاهو فایننس
           - آپدیت خودکار هر ۳۰ ثانیه + رفرش دستی" \
             --latest

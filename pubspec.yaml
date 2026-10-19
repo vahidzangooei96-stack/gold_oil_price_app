@@ -1,7 +1,7 @@
 name: gold_oil_price
-description: "امپراتوری طلا و نفت — قیمت لحظه‌ای طلا و سکه ایران و نفت جهانی با تم لوکس سیاه-طلایی — Flutter + Material 3"
+description: "قیمت لحظه‌ای طلا، سکه و نفت ایران با تم پلنگ صورتی — چند API ایرانی (تالا، TGJU، api.tala.ir) با قابلیت تغییر منبع توسط کاربر — Flutter + Material 3"
 publish_to: 'none'
-version: 1.2.0+3
+version: 1.3.0+4
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -20,6 +20,9 @@ dependencies:
   # مدیریت State با الگوی ChangeNotifier
   provider: ^6.1.2
 
+  # ذخیره‌سازی انتخاب منبع داده و کلید API کاربر
+  shared_preferences: ^2.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -29,7 +32,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/lion_crest.jpg
+    - assets/images/pink_panther.jpg
 
   # فونت فارسی وزیرمتن (مجوز OFL در پوشه assets/fonts)
   fonts:

@@ -1,6 +1,9 @@
 /// مدل نمایشی هر ردیف قیمت دریافتی از منابع داده
-class TalaPrice {
-  const TalaPrice({
+///
+/// نام عمومی است چون داده ممکن است از هر منبعی بیاید:
+/// tala.ir، TGJU، api.tala.ir (رسمی) یا نفت یاهو.
+class PriceRow {
+  const PriceRow({
     required this.title,
     required this.value,
     required this.unit,
@@ -29,16 +32,15 @@ class TalaPrice {
   final String group;
 }
 
-/// یک اسنپ‌شات کامل از قیمت‌های سایت طلا
-class TalaSnapshot {
-  const TalaSnapshot({required this.items, this.jdate, this.feedTimeMs});
+/// یک اسنپ‌شات کامل قیمت‌ها از هر منبع داده
+class MarketSnapshot {
+  const MarketSnapshot({required this.items, this.jdate, this.feedTimeMs});
 
-  final List<TalaPrice> items;
+  final List<PriceRow> items;
 
   /// زمان شمسی آخرین بروزرسانی به‌صورت متن، مانند «18:14 1405/07/27»
   final String? jdate;
 
   /// مُهر زمانی (میلی‌ثانیه) خودِ داده از سرور؛ برای محاسبه «سن داده»
-  /// دقیقاً مثل سایت که از فیلد m استفاده می‌کند.
   final int? feedTimeMs;
 }

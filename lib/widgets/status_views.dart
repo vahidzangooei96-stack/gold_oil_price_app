@@ -9,7 +9,7 @@ class LoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color onBg = isDark ? AppTheme.ivory : AppTheme.bronzeDark;
+    final Color onBg = isDark ? AppTheme.roseWhite : AppTheme.plumDark;
 
     return _FullPageScrollable(
       child: Column(
@@ -17,7 +17,7 @@ class LoadingView extends StatelessWidget {
         children: <Widget>[
           const CircularProgressIndicator(
             strokeWidth: 3,
-            color: AppTheme.gold,
+            color: AppTheme.pink,
           ),
           const SizedBox(height: 20),
           Text(
@@ -45,7 +45,7 @@ class ErrorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
-    final Color onBg = isDark ? AppTheme.ivory : AppTheme.bronzeDark;
+    final Color onBg = isDark ? AppTheme.roseWhite : AppTheme.plumDark;
 
     return _FullPageScrollable(
       child: Padding(
@@ -78,8 +78,8 @@ class ErrorView extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.gold,
-                foregroundColor: const Color(0xFF14110B),
+                backgroundColor: AppTheme.pink,
+                foregroundColor: const Color(0xFF2B0A1B),
               ),
               icon: const Icon(Icons.refresh),
               label: const Text('تلاش دوباره'),

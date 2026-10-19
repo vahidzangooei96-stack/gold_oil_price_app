@@ -1,159 +1,65 @@
-# امپراتوری طلا و نفت — Flutter
+# قیمت لحظه‌ای طلا و نفت — «پلنگ صورتی» (Flutter)
 
-اپلیکیشن اندرویدی ساخته‌شده با **Flutter** و **Material 3** برای نمایش لحظه‌ای:
-
-- قیمت انس طلا (XAU/USD) به دلار
-- قیمت نفت برنت (Brent Crude) به دلار در هر بشکه
+اپلیکیشن اندرویدی ساخته‌شده با **Flutter** و **Material 3** با تم صورتیِ پلنگ برای نمایش لحظه‌ای طلا، سکه، ارز و نفت — با **قابلیت تغییر منبع داده (API) توسط کاربر**.
 
 ## ویژگی‌ها
 
-- دو کارت بزرگ و مدرن برای طلا و نفت با پس‌زمینه گرادیانی
-- فونت بزرگ و خوانا برای قیمت‌ها + ارقام فارسی با جداکننده هزارگان (۲٬۶۵۰٫۳۵)
-- نمایش واحد قیمت زیر هر عدد (دلار برای هر اونس / دلار برای هر بشکه)
-- نمایش زمان آخرین بروزرسانی موفق
-- آپدیت خودکار قیمت‌ها هر ۳۰ ثانیه
-- دکمه رفرش دستی در AppBar و Pull-to-Refresh
-- نمایش وضعیت بارگذاری (Loading) و پیام خطای فارسی هنگام قطع اینترنت
-- بنر هشدار ملایم وقتی آپدیت جدید شکست می‌خورد ولی داده‌های قبلی موجودند
-- نشان افزایش/کاهش قیمت نسبت به دریافت قبلی (سبز/قرمز)
-- پشتیبانی کامل Dark Mode + سوییچ پوسته (سیستم / تاریک / روشن)
-- طراحی ریسپانسیو: کارت‌ها در تبلت و حالت افقی کنار هم قرار می‌گیرند
-- Material 3 + فونت فارسی وزیرمتن + بومی‌سازی کامل پیام‌های Material به فارسی
-- مدیریت State با Provider (الگوی ChangeNotifier)
-- توقف خودکار آپدیت در پس‌زمینه و ادامه فوری پس از بازگشت (بهینه‌سازی باتری)
-- درخواست‌های موازی برای دو منبع؛ شکست یکی، دیگری را خراب نمی‌کند
+### منابع داده قابل انتخاب (تنظیمات اپ)
+- **تالا** (پیش‌فرض، بدون کلید): فید AJAX صفحه اصلی tala.ir — مثقال، ۱۸ و ۲۴ عیار، سکه‌ها، انس، نقره
+- **TGJU** (بدون کلید): call.tgju.org — طلا ۱۸ و ۲۴ عیار، مثقال، سکه‌ها، دلار، یورو، انس، نقره، برنت
+- **API رسمی تالا** (با کلید شخصی): api.tala.ir نسخه v1 — کاربر کلید API خود را از api.tala.ir می‌گیرد و در اپ وارد می‌کند
+- انتخاب کاربر به‌همراه کلید API در حافظه دستگاه ذخیره می‌شود (shared_preferences)
+- قیمت‌های داخلی TGJU از ریال به تومان تبدیل می‌شود تا همه منابع هم‌واحد نمایش داده شوند
+
+### نفت جهانی (در همه حالت‌ها)
+- **نفت برنت و WTI** از Yahoo Finance (بدون کلید) با اولویت تازگی؛ برنتِ منبع ایرانی فقط پشتیبان است
+
+### رابط کاربری
+- تم «پلنگ صورتی»: صورتی براق روی بادمجانی تیره (تاریک) و گل‌بهی (روشن) + بنر کارتونی اختصاصی
+- بخش‌بندی بازار جهانی / نفت و انرژی / بازار ایران + تحلیل خودکار فارسی از جهت بازار
+- ارقام فارسی با جداکننده هزارگان + فونت وزیرمتن + بومی‌سازی کامل Material
+- آپدیت خودکار هر ۳۰ ثانیه با شمارش معکوس زنده + پنل «تازگی داده» (ساعت دریافت، سن داده، نوار پیشرفت)
+- درخواست‌های کش‌باستر و no-cache تا همیشه تازه‌ترین داده برگردد
+- شکست هر منبع مستقل مهار می‌شود؛ بعد از خطا ۱۰ ثانیه‌ای دوباره تلاش می‌کند
+- Pull-to-Refresh، سوییچ پوسته (سیستم/تاریک/روشن)، طراحی ریسپانسیو دو ستونه
+- مدیریت State با Provider (الگوی ChangeNotifier) + توقف آپدیت در پس‌زمینه
 
 ## ساختار پروژه
 
 ```
 gold_oil_price_app/
-├── pubspec.yaml                    # وابستگی‌ها و تنظیمات فونت
-├── analysis_options.yaml           # قواعد Lint
-├── .gitignore
-├── README.md
+├── pubspec.yaml                    # وابستگی‌ها، فونت و asset بنر
+├── .github/workflows/build-apk.yml # CI: تست + بیلد APK + انتشار Release
 ├── assets/
-│   └── fonts/                      # فونت وزیرمتن (Regular/Medium/Bold + OFL.txt)
+│   ├── fonts/                      # فونت وزیرمتن (Regular/Medium/Bold + OFL.txt)
+│   └── images/pink_panther.jpg     # بنر اختصاصی پلنگ صورتی
 ├── test/
-│   └── widget_test.dart            # تست دود (Smoke Test) صفحه اصلی
+│   └── widget_test.dart            # تست صفحه اصلی + تست واحد پارس TGJU
 └── lib/
-    ├── main.dart                   # نقطه ورود، Providerها، تم و لوکال فارسی
-    ├── models/
-    │   └── price_models.dart       # مدل PriceData
+    ├── main.dart                   # ورود اپ + بازیابی منبع ذخیره‌شده کاربر
+    ├── models/price_models.dart    # PriceRow و MarketSnapshot
     ├── services/
-    │   └── api_service.dart        # دریافت قیمت از دو API
+    │   ├── api_exception.dart      # خطای فارسی سطح اپ
+    │   ├── source_registry.dart    # رجیستری منابع قابل انتخاب
+    │   ├── yahoo_service.dart      # برنت و WTI از یاهو
+    │   └── sources/
+    │       ├── market_source.dart  # قرارداد مشترک منابع
+    │       ├── tala_source.dart    # منبع تالا (بدون کلید)
+    │       ├── tgju_source.dart    # منبع TGJU (بدون کلید)
+    │       └── tala_official_source.dart # api.tala.ir با کلید کاربر
     ├── providers/
-    │   ├── prices_provider.dart    # مدیریت State قیمت‌ها + تایمر ۳۰ ثانیه
-    │   └── theme_provider.dart     # مدیریت پوسته روشن/تاریک/سیستم
-    ├── theme/
-    │   └── app_theme.dart          # تم‌های Material 3
-    ├── utils/
-    │   └── formatters.dart         # ارقام فارسی، جداکننده هزارگان، ساعت
-    ├── screens/
-    │   └── home_screen.dart        # صفحه اصلی
-    └── widgets/
-        ├── price_card.dart         # کارت بزرگ قیمت
-        └── status_views.dart       # نمای بارگذاری و نمای خطا
+    │   ├── prices_provider.dart    # State قیمت‌ها + تعویض منبع + ذخیره‌سازی
+    │   └── theme_provider.dart     # سوییچ پوسته
+    ├── screens/home_screen.dart    # صفحه اصلی با بنر و بخش‌ها
+    ├── widgets/                    # کارت قیمت، شیت منبع، نماهای وضعیت
+    ├── theme/app_theme.dart        # تم پلنگ صورتی (روشن/تاریک)
+    └── utils/formatters.dart       # قالب‌بندی فارسی اعداد و زمان
 ```
 
-## معماری
+## بیلد و انتشار
+
+پوش به `main` به‌صورت خودکار در GitHub Actions: تست‌ها را اجرا می‌کند، APK Release می‌سازد و در Release همیشگی `latest` منتشر می‌کند:
 
 ```
-UI (HomeScreen / PriceCard)
-        │  watch / read
-        ▼
-PricesProvider (ChangeNotifier)  ←  Timer هر ۳۰ ثانیه + Observer چرخه حیات
-        │  fetch (موازی)
-        ▼
-TalaService (http)  →  tala.ir/ajax/price (اونس، طلا و سکه ایران، نقره)
-YahooService (http) →  query1.finance.yahoo.com  (برنت و WTI لحظه‌ای)
+https://github.com/vahidzangooei96-stack/gold_oil_price_app/releases/latest/download/Gold-Oil-Price.apk
 ```
-
-- **UI** فقط با `context.watch` وضعیت را می‌خواند و با `context.read` اکشن صادر می‌کند.
-- **PricesProvider** وضعیت (قیمت‌ها، بارگذاری، خطا، زمان آخرین بروزرسانی) را نگه می‌دارد؛
-  درخواست‌های موازی با `Future.wait` ارسال می‌شوند و خطای هر منبع جدا مهار می‌شود.
-- **ApiService** فقط کار شبکه و پارس JSON را انجام می‌دهد و پیام‌های خطای فارسی تولید می‌کند.
-
-## پیش‌نیازها
-
-- Flutter SDK نسخه ۳.۲۴ یا بالاتر (Dart 3)
-- Android SDK / Android Studio برای بیلد اندروید
-
-## راه‌اندازی
-
-```bash
-git clone https://github.com/vahidzangooei96-stack/gold_oil_price_app.git
-cd gold_oil_price_app
-
-# فقط بار اول: تولید پوشه‌های پلتفرمی (android/ ، ios/ و ...) از روی pubspec موجود
-flutter create .
-
-# نصب وابستگی‌ها
-flutter pub get
-
-# اجرا روی دستگاه یا شبیه‌ساز
-flutter run
-```
-
-اگر `flutter create .` درباره نام پکیج خطا داد، از دستور زیر استفاده کنید:
-
-```bash
-flutter create . --project-name gold_oil_price
-```
-
-## مجوز اینترنت (مهم برای نسخه Release)
-
-در فایل `android/app/src/main/AndroidManifest.xml` این خط را داخل تگ `<manifest>`
-(بالای `<application>`) اضافه کنید:
-
-```xml
-<uses-permission android:name="android.permission.INTERNET" />
-```
-
-در حالت Debug این مجوز به‌صورت پیش‌فرض وجود دارد، اما برای خروجی Release لازم است.
-
-## تغییر نام نمایشی اپ (اختیاری)
-
-در همان فایل، روی تگ `<application>` مقدار `android:label` را به دلخواه تغییر دهید؛
-مثلاً: `android:label="قیمت طلا و نفت"`.
-
-## بیلد خروجی Release
-
-```bash
-flutter build apk --release
-# مسیر خروجی: build/app/outputs/flutter-apk/app-release.apk
-```
-
-## اجرای تست‌ها
-
-```bash
-flutter test
-```
-
-## منابع قیمت
-
-داده‌ها از endpoint رسمی AJAX صفحه اصلی **tala.ir** خوانده می‌شود:
-
-```
-https://www.tala.ir/ajax/price
-```
-
-این همان آدرسی است که خود صفحه اصلی tala.ir قیمت‌هایش را از آن پر می‌کند؛
-اپلیکیشن قیمت‌های زیر را نمایش می‌دهد (همان جعبه‌های صفحه اصلی سایت):
-
-اونس طلا (دلار) | مثقال ۱۷ | طلای ۱۸ عیار | طلای ۲۴ عیار | سکه امامی |
-نیم سکه | ربع سکه | سکه گرمی | ارزش طلای سکه | نفت برنت (دلار) | نقره جهانی (دلار)
-
-> چون tala.ir یک سایت ایرانی است، این اپ داخل ایران بدون محدودیت کار می‌کند.
-
-## تم فانتزی
-
-- پس‌زمینه گرادیانی صورتی ↔ آبی (حالت روشن) و بنفش شبانه (حالت تاریک)
-- بنر تصویری شخصیت‌های فانتزی اگری و الاغ (تولیدشده با هوش مصنوعی، در `assets/images`)
-- کارت‌های حبابی گرد با حاشیه صورتی/آبی متناوب
-
-## شخصی‌سازی
-
-- **رنگ اصلی اپ**: `lib/theme/app_theme.dart` → `seedColor`
-- **فاصله آپدیت خودکار**: `lib/providers/prices_provider.dart` → `autoRefreshInterval`
-- **فونت**: فایل‌های پوشه `assets/fonts` (وزیرمتن — مجوز OFL در همان پوشه موجود است)
-- **زمان تایم‌اوت درخواست‌ها**: `lib/services/api_service.dart` → `_timeout`

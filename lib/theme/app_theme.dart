@@ -1,55 +1,55 @@
 import 'package:flutter/material.dart';
 
-/// تم لوکس «سیاه و طلایی» اپلیکیشن (Material 3)
+/// تم «پلنگ صورتی» اپلیکیشن (Material 3)
 ///
-/// الهام از طرح‌های امپراتوری مالی: پس‌زمینه مشکیِ عمیق با طلای براق
-/// در حالت تاریک، و عاج گرم با برنز تیره در حالت روشن.
+/// صورتیِ براق پلنگ روی بادمجانیِ تیره در حالت تاریک،
+/// و گل‌بهیِ روشن با آلوییِ اشباع در حالت روشن.
 /// تمام متن‌های اپ فارسی است.
 class AppTheme {
   AppTheme._();
 
-  /// طلای اصلی (رنگ بذر تم)
-  static const Color gold = Color(0xFFD4AF37);
+  /// صورتی اصلی پلنگ (رنگ بذر تم)
+  static const Color pink = Color(0xFFEC4899);
 
-  /// طلای روشن برای متن‌ها و هایلایت‌ها روی زمینه تاریک
-  static const Color goldLight = Color(0xFFF1D689);
+  /// صورتی روشن برای متن‌ها و هایلایت‌ها روی زمینه تاریک
+  static const Color pinkLight = Color(0xFFF9A8D4);
 
-  /// برنز تیره برای متن روی زمینه روشن (عاج)
-  static const Color bronzeDark = Color(0xFF2B2113);
+  /// آلویی تیره برای متن روی زمینه روشن
+  static const Color plumDark = Color(0xFF3B0E26);
 
-  /// عاج روشن برای متن روی زمینه تاریک
-  static const Color ivory = Color(0xFFF3EBD3);
+  /// گل‌بهی روشن برای متن روی زمینه تاریک
+  static const Color roseWhite = Color(0xFFFDF2F7);
 
-  /// پس‌زمینه کارت در حالت تاریک
-  static const Color cardDark = Color(0xFF17130B);
+  /// پس‌زمینه کارت در حالت تاریک (بادمجانی عمیق)
+  static const Color cardDark = Color(0xFF24101C);
 
   /// پس‌زمینه کارت در حالت روشن
-  static const Color cardLight = Color(0xFFFFFBF0);
+  static const Color cardLight = Color(0xFFFFF4F8);
 
   /// سبز موفقیت (افزایش قیمت)
-  static const Color gain = Color(0xFF3DBE7B);
+  static const Color gain = Color(0xFF34D399);
 
   /// قرمز کاهش قیمت
-  static const Color loss = Color(0xFFE05252);
+  static const Color loss = Color(0xFFF87171);
 
-  /// گرادیان پس‌زمینه حالت تاریک (مشکی امپراتوری)
+  /// گرادیان پس‌زمینه حالت تاریک (بادمجانی پلنگ)
   static const List<Color> darkGradient = <Color>[
-    Color(0xFF0B0A08),
-    Color(0xFF12100B),
-    Color(0xFF1A160E),
+    Color(0xFF1A0A13),
+    Color(0xFF210D19),
+    Color(0xFF2A1120),
   ];
 
-  /// گرادیان پس‌زمینه حالت روشن (عاج گرم)
+  /// گرادیان پس‌زمینه حالت روشن (گل‌بهی نرم)
   static const List<Color> lightGradient = <Color>[
-    Color(0xFFF8F3E6),
-    Color(0xFFF4EBD8),
-    Color(0xFFEFE3C8),
+    Color(0xFFFDF1F6),
+    Color(0xFFFBE7F0),
+    Color(0xFFF7DCE9),
   ];
 
-  /// گرادیان طلایی برای آیکون‌ها و نشان‌ها
-  static const List<Color> goldGradient = <Color>[
-    Color(0xFFB8912E),
-    Color(0xFFF1D689),
+  /// گرادیان صورتی برای آیکون‌ها و نشان‌ها
+  static const List<Color> pinkGradient = <Color>[
+    Color(0xFFF472B6),
+    Color(0xFFDB2777),
   ];
 
   /// فونت فارسی اپلیکیشن
@@ -63,12 +63,12 @@ class AppTheme {
     final bool isDark = brightness == Brightness.dark;
 
     final ColorScheme scheme = ColorScheme.fromSeed(
-      seedColor: gold,
+      seedColor: pink,
       brightness: brightness,
     ).copyWith(
-      primary: gold,
-      onPrimary: isDark ? const Color(0xFF14110B) : Colors.white,
-      secondary: gold,
+      primary: pink,
+      onPrimary: isDark ? const Color(0xFF2B0A1B) : Colors.white,
+      secondary: pink,
       surface: isDark ? cardDark : cardLight,
     );
 
@@ -77,17 +77,17 @@ class AppTheme {
       colorScheme: scheme,
       fontFamily: fontFamily,
       scaffoldBackgroundColor:
-          isDark ? const Color(0xFF0B0A08) : const Color(0xFFF8F3E6),
+          isDark ? const Color(0xFF1A0A13) : const Color(0xFFFDF1F6),
       appBarTheme: AppBarTheme(
         centerTitle: true,
         elevation: 0,
         scrolledUnderElevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: isDark ? goldLight : bronzeDark,
+        foregroundColor: isDark ? pinkLight : plumDark,
       ),
-      iconTheme: IconThemeData(color: isDark ? goldLight : bronzeDark),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(color: gold),
-      dividerTheme: DividerThemeData(color: gold.withOpacity(0.25)),
+      iconTheme: IconThemeData(color: isDark ? pinkLight : plumDark),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(color: pink),
+      dividerTheme: DividerThemeData(color: pink.withOpacity(0.25)),
     );
   }
 }

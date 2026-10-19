@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/price_models.dart';
 import '../utils/formatters.dart';
-import 'api_service.dart';
+import 'api_exception.dart';
 
 /// سرویس قیمت لحظه‌ای نفت از Yahoo Finance — بدون نیاز به کلید API
 ///
@@ -14,7 +14,7 @@ import 'api_service.dart';
 ///   WTI   → https://query1.finance.yahoo.com/v8/finance/chart/CL=F
 ///   برنت  → https://query1.finance.yahoo.com/v8/finance/chart/BZ=F
 ///
-/// این منبع، نفت WTI را (که در tala.ir نیست) تأمین می‌کند و
+/// این منبع، نفت WTI را (که در منابع ایرانی نیست) تأمین می‌کند و
 /// برنت را هم با تازگی بالاتر به‌روزرسانی می‌کند.
 class YahooService {
   YahooService({http.Client? client}) : _client = client ?? http.Client();
@@ -33,19 +33,19 @@ class YahooService {
 
   /// دریافت برنت و WTI به‌صورت موازی؛ خطای هر نماد مستقل است و
   /// اگر هر دو شکست بخورند، ApiException پرتاب می‌شود.
-  Future<List<TalaPrice>> fetchOilQuotes() async {
+  Future<List<PriceRow>> fetchOilQuotes() async {
     final List<Object?> results = await Future.wait(<Future<Object?>>[
       _fetchSymbol('CL%3DF', 'نفت WTI')
-          .then<Object?>((TalaPrice v) => v)
+          .then<Object?>((PriceRow v) => v)
           .catchError((Object _) => null),
       _fetchSymbol('BZ%3DF', 'نفت برنت')
-          .then<Object?>((TalaPrice v) => v)
+          .then<Object?>((PriceRow v) => v)
           .catchError((Object _) => null),
     ]);
 
-    final List<TalaPrice> rows = <TalaPrice>[];
+    final List<PriceRow> rows = <PriceRow>[];
     for (final Object? r in results) {
-      if (r is TalaPrice) rows.add(r);
+      if (r is PriceRow) rows.add(r);
     }
 
     if (rows.isEmpty) {
@@ -54,7 +54,7 @@ class YahooService {
 
     // برنت همیشه اول نمایش داده شود
     rows.sort(
-      (TalaPrice a, TalaPrice b) =>
+      (PriceRow a, PriceRow b) =>
           (a.title == 'نفت برنت' ? 0 : 1) - (b.title == 'نفت برنت' ? 0 : 1),
     );
     return rows;
@@ -69,7 +69,7 @@ class YahooService {
   // ─────────────────────────── Internal ───────────────────────────
 
   /// دریافت قیمت یک نماد آتی نفت و تبدیل آن به ردیف نمایشی
-  Future<TalaPrice> _fetchSymbol(String symbol, String title) async {
+  Future<PriceRow> _fetchSymbol(String symbol, String title) async {
     // کش‌باستر تا هیچ پاسخ کش‌شده‌ای برنگردد
     final int bust = DateTime.now().millisecondsSinceEpoch;
     final Uri uri = Uri.parse(
@@ -125,7 +125,7 @@ class YahooService {
       isUp = p >= 0;
     }
 
-    return TalaPrice(
+    return PriceRow(
       title: title,
       value: Formatters.price(price.toDouble()),
       unit: 'دلار برای هر بشکه',
