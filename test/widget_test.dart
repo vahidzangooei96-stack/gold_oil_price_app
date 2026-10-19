@@ -23,14 +23,20 @@ class FakeTalaService extends TalaService {
 }
 
 void main() {
-  testWidgets('صفحه اصلی بدون تماس با شبکه رندر می‌شود',
+  testWidgets('صفحه اصلی با داده جعلی رندر می‌شود (بدون تماس با شبکه)',
       (WidgetTester tester) async {
     final PricesProvider prices =
         PricesProvider(talaService: FakeTalaService());
 
+    // شروع دریافت داده با سرویس جعلی (پاسخ فوری)
+    prices.fetchAll();
+
     await tester.pumpWidget(
       GoldOilPriceApp(pricesProvider: prices, themeProvider: ThemeProvider()),
     );
+
+    // یک فریم برای پردازش پاسخ جعلی و رندر بنر
+    await tester.pump();
     await tester.pump();
 
     // عنوان بنر باید نمایش داده شود
