@@ -4,6 +4,9 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../models/price_models.dart';
+import '../utils/formatters.dart';
+
 /// خطای سطح اپلیکیشن همراه با پیام فارسی، آماده برای نمایش به کاربر
 class ApiException implements Exception {
   const ApiException(this.message);
@@ -14,51 +17,84 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// سرویس دریافت قیمت‌ها از دو API رایگان (بدون نیاز به کلید)
+/// پیکربندی یک ردیف قیمت: از کدام بخش و کلید JSON بخوانیم و چه نامی بگذاریم
+class PriceRowConfig {
+  const PriceRowConfig(this.section, this.key, this.title, this.unit);
+
+  final String section;
+  final String key;
+  final String title;
+  final String unit;
+}
+
+/// سرویس دریافت قیمت‌ها از سایت طلا (tala.ir)
 ///
-/// - انس طلا:    https://xaus.com/api/v1/spot             → فیلد spot_usd_oz
-/// - نفت برنت:  https://americasoilwatch.com/api/v1/brent → فیلد priceUsd
-class ApiService {
-  ApiService({http.Client? client}) : _client = client ?? http.Client();
+/// منبع داده، همان endpoint رسمی AJAX صفحه اصلی سایت است:
+/// https://www.tala.ir/ajax/price
+/// که خود صفحه اصلی tala.ir نیز قیمت‌هایش را از همین‌جا پر می‌کند.
+class TalaService {
+  TalaService({http.Client? client}) : _client = client ?? http.Client();
 
   final http.Client _client;
 
-  /// حداکثر زمان انتظار برای هر درخواست
+  /// حداکثر زمان انتظار برای درخواست
   static const Duration _timeout = Duration(seconds: 15);
 
-  // نکته: Uri.parse متد است نه constructor ثابت؛ پس باید final باشد نه const
-  static final Uri _goldUri = Uri.parse('https://xaus.com/api/v1/spot');
-  static final Uri _brentUri =
-      Uri.parse('https://americasoilwatch.com/api/v1/brent');
+  static final Uri _priceUri = Uri.parse('https://www.tala.ir/ajax/price');
 
-  /// هدر User-Agent واقعی‌نما؛ بعضی سرورها (پشت Cloudflare) درخواست‌های
-  /// بدون UA مرورگر را رد می‌کنند.
+  /// هدرهای شبیه مرورگر؛ سرور درخواست AJAX بدون این هدرها را رد می‌کند
   static const Map<String, String> _headers = <String, String>{
-    'Accept': 'application/json',
+    'Accept': 'application/json, text/javascript, */*; q=0.01',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Referer': 'https://www.tala.ir/',
     'User-Agent':
-        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldOilPriceApp/1.0',
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldPriceApp/1.1',
   };
 
-  /// قیمت انس طلا (XAU/USD) بر حسب دلار برای هر اونس
-  Future<double> fetchGoldPrice() async {
-    final Map<String, dynamic> data = await _getJson(_goldUri);
-    final dynamic raw = _resolve(data, const <String>[
-      'spot_usd_oz', // فیلد رسمی مستندشده xaus.com
-      'spotUsdOz', // حالت جایگزین camelCase
-      'price',
-    ]);
-    return _toDouble(raw, 'spot_usd_oz');
-  }
+  /// همان قیمت‌هایی که در صفحه اصلی tala.ir نمایش داده می‌شوند
+  static const List<PriceRowConfig> _rows = <PriceRowConfig>[
+    PriceRowConfig('gold', 'gold_ounce', 'اونس طلا', 'دلار برای هر اونس'),
+    PriceRowConfig('gold', 'gold_bazaruser', 'مثقال ۱۷', 'تومان'),
+    PriceRowConfig('gold', 'gold_18k', 'طلای ۱۸ عیار', 'تومان'),
+    PriceRowConfig('gold', 'gold_24k', 'طلای ۲۴ عیار', 'تومان'),
+    PriceRowConfig('sekke', 'sekke-jad', 'سکه امامی', 'تومان'),
+    PriceRowConfig('sekke', 'sekke-nim', 'نیم سکه', 'تومان'),
+    PriceRowConfig('sekke', 'sekke-rob', 'ربع سکه', 'تومان'),
+    PriceRowConfig('sekke', 'sekke-grm', 'سکه گرمی', 'تومان'),
+    PriceRowConfig('sekke', 'sekke-mazane', 'ارزش طلای سکه', 'تومان'),
+    PriceRowConfig('other', 'other_oil', 'نفت برنت', 'دلار برای هر بشکه'),
+    PriceRowConfig('other', 'other_silver', 'نقره جهانی', 'دلار برای هر اونس'),
+  ];
 
-  /// قیمت نفت برنت بر حسب دلار برای هر بشکه
-  Future<double> fetchBrentPrice() async {
-    final Map<String, dynamic> data = await _getJson(_brentUri);
-    final dynamic raw = _resolve(data, const <String>[
-      'priceUsd', // فیلد رسمی مستندشده americasoilwatch.com
-      'price_usd', // حالت جایگزین snake_case
-      'price',
-    ]);
-    return _toDouble(raw, 'priceUsd');
+  /// دریافت همه قیمت‌ها در یک درخواست
+  Future<TalaSnapshot> fetchPrices() async {
+    final Map<String, dynamic> data = await _getJson(_priceUri);
+
+    final List<TalaPrice> rows = <TalaPrice>[];
+    String? jdate;
+
+    for (final PriceRowConfig cfg in _rows) {
+      final dynamic section = data[cfg.section];
+      if (section is! Map<String, dynamic>) continue;
+      final dynamic item = section[cfg.key];
+      if (item is! Map<String, dynamic>) continue;
+
+      jdate ??= (item['jdate'] as String?);
+
+      rows.add(TalaPrice(
+        title: cfg.title,
+        value: _formatValue(item),
+        unit: cfg.unit,
+        changeText: _changePercent(item['d'] as String?),
+        isUp: _direction(item['d'] as String?),
+      ));
+    }
+
+    if (rows.isEmpty) {
+      throw const ApiException('قیمتی در پاسخ سرور یافت نشد.');
+    }
+
+    return TalaSnapshot(items: rows, jdate: jdate);
   }
 
   /// آزادسازی منابع شبکه
@@ -66,7 +102,7 @@ class ApiService {
 
   // ─────────────────────────── Internal ───────────────────────────
 
-  /// دریافت و رمزگشایی پاسخ JSON از سرور
+  /// دریافت و رمزگشایی پاسخ JSON
   Future<Map<String, dynamic>> _getJson(Uri uri) async {
     try {
       final http.Response response =
@@ -77,28 +113,13 @@ class ApiService {
       }
 
       final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
-
-      if (decoded is Map<String, dynamic>) {
-        // بعضی APIها داده اصلی را داخل یک فیلد تودرتو برمی‌گردانند
-        final dynamic inner = decoded['data'];
-        if (decoded.length == 1 && inner is Map<String, dynamic>) {
-          return inner;
-        }
-        return decoded;
-      }
-
-      // اگر پاسخ آرایه‌ای از آبجکت‌ها بود، عنصر اول را در نظر بگیر
-      if (decoded is List &&
-          decoded.isNotEmpty &&
-          decoded.first is Map<String, dynamic>) {
-        return decoded.first as Map<String, dynamic>;
-      }
+      if (decoded is Map<String, dynamic>) return decoded;
 
       throw const ApiException('ساختار پاسخ سرور قابل خواندن نبود.');
     } on SocketException {
       throw const ApiException('اتصال اینترنت برقرار نیست.');
     } on TimeoutException {
-      throw const ApiException('پاسخی از سرور دریافت نشد (مهلت تمام شد).');
+      throw const ApiException('پاسخی از tala.ir دریافت نشد (مهلت تمام شد).');
     } on FormatException {
       throw const ApiException('پاسخ سرور معتبر نبود.');
     } on ApiException {
@@ -108,29 +129,34 @@ class ApiService {
     }
   }
 
-  /// جست‌وجوی فیلد قیمت در سطح اول و سپس در آبجکت‌های تودرتوی رایج
-  dynamic _resolve(Map<String, dynamic> data, List<String> keys) {
-    for (final String key in keys) {
-      if (data[key] != null) return data[key];
-    }
-    for (final String container in const <String>['data', 'result', 'payload']) {
-      final dynamic inner = data[container];
-      if (inner is Map<String, dynamic>) {
-        for (final String key in keys) {
-          if (inner[key] != null) return inner[key];
-        }
-      }
-    }
-    throw ApiException('فیلد «${keys.first}» در پاسخ سرور یافت نشد.');
+  /// قالب‌بندی مقدار قیمت؛ اگر عدد قابل خواندن باشد با قالب فارسی زیبا
+  /// نمایش داده می‌شود، وگرنه همان متن سایت (v_fa) برمی‌گردد.
+  String _formatValue(Map<String, dynamic> item) {
+    final String? raw = (item['v'] ?? item['v_fa'])?.toString();
+    if (raw == null || raw.isEmpty) return '—';
+    final String cleaned = raw.replaceAll(',', '').trim();
+    final double? num = double.tryParse(cleaned);
+    if (num == null) return raw; // مقدار غیرعددی: همان متن اصلی
+    return Formatters.price(num);
   }
 
-  /// تبدیل مقدار خام به double با تحمل نوع رشته‌ای
-  double _toDouble(dynamic raw, String field) {
-    if (raw is num) return raw.toDouble();
-    if (raw is String) {
-      final double? parsed = double.tryParse(raw.replaceAll(',', ''));
-      if (parsed != null) return parsed;
-    }
-    throw ApiException('مقدار فیلد «$field» عدد معتبری نیست.');
+  /// استخراج درصد تغییر از متن d سایت، مانند «-7.06 (0.16%)» → «۰.۱۶٪»
+  String? _changePercent(String? d) {
+    if (d == null || d.trim().isEmpty) return null;
+    final Match? m = RegExp(r'\(([^)]+)\)').firstMatch(d);
+    final String? pct = m?.group(1);
+    if (pct == null || pct.trim().isEmpty) return null;
+    return Formatters.toPersianDigits(pct.trim());
+  }
+
+  /// تشخیص جهت تغییر از علامتِ ابتدای متن d
+  bool? _direction(String? d) {
+    if (d == null || d.trim().isEmpty) return null;
+    final Match? m = RegExp(r'^\s*(-?)\s*([\d,\.]+)').firstMatch(d);
+    if (m == null) return null;
+    final double? num =
+        double.tryParse((m.group(2) ?? '0').replaceAll(',', ''));
+    if (num == null || num == 0) return null;
+    return (m.group(1) ?? '').isEmpty;
   }
 }

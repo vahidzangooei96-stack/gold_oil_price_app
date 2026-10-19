@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 
 import '../providers/prices_provider.dart';
 import '../providers/theme_provider.dart';
-import '../utils/formatters.dart';
+import '../theme/app_theme.dart';
 import '../widgets/price_card.dart';
 import '../widgets/status_views.dart';
 
-/// صفحه اصلی: دو کارت بزرگ قیمت طلا و نفت برنت + رفرش دستی و خودکار
+/// صفحه اصلی فانتزی: بنر اگری و الاغ + لیست قیمت‌های صفحه اصلی tala.ir
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -17,9 +17,15 @@ class HomeScreen extends StatelessWidget {
     final ThemeProvider themeProvider = context.watch<ThemeProvider>();
     final bool isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // رنگ متن‌های روی پس‌زمینه گرادیان — در حالت روشن بنفش تیره
+    final Color onBg = isDark ? Colors.white : const Color(0xFF6B2E8F);
+
     return Scaffold(
+      // پس‌زمینه و AppBar شفاف تا گرادیان فانتزی دیده شود
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('قیمت لحظه‌ای طلا و نفت'),
+        backgroundColor: Colors.transparent,
+        title: const Text(''),
         actions: <Widget>[
           // سوییچ پوسته: سیستم / تاریک / روشن
           IconButton(
@@ -27,25 +33,38 @@ class HomeScreen extends StatelessWidget {
             onPressed: themeProvider.toggle,
             icon: Icon(
               isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              color: onBg,
             ),
           ),
           // رفرش دستی
           IconButton(
             tooltip: 'بروزرسانی قیمت‌ها',
-            onPressed:
-                prices.isLoading ? null : () => prices.fetchAll(),
-            icon: const Icon(Icons.refresh),
+            onPressed: prices.isLoading ? null : () => prices.fetchAll(),
+            icon: Icon(Icons.refresh, color: onBg),
           ),
           const SizedBox(width: 4),
         ],
       ),
-      body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () => prices.fetchAll(showLoading: false),
-          child: LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              return _buildBody(context, prices, constraints);
-            },
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topRight,
+            end: Alignment.bottomLeft,
+            colors: AppTheme.darkGradient,
+          ),
+        ),
+        child: SafeArea(
+          top: true,
+          child: RefreshIndicator(
+            color: AppTheme.seedPink,
+            onRefresh: () => prices.fetchAll(showLoading: false),
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                return _buildBody(context, prices, constraints, onBg);
+              },
+            ),
           ),
         ),
       ),
@@ -56,115 +75,136 @@ class HomeScreen extends StatelessWidget {
     BuildContext context,
     PricesProvider prices,
     BoxConstraints constraints,
+    Color onBg,
   ) {
-    final bool hasNoData = prices.gold == null && prices.brent == null;
-
     // ۱) بارگذاری اولیه
-    if (prices.isLoading && hasNoData) return const LoadingView();
+    if (prices.isLoading && prices.items.isEmpty) return const LoadingView();
 
-    // ۲) خطای کامل (هیچ داده‌ای از قبل موجود نیست)
-    if (hasNoData && prices.errorMessage != null) {
+    // ۲) خطای کامل (هیچ داده‌ای موجود نیست)
+    if (prices.items.isEmpty && prices.errorMessage != null) {
       return ErrorView(
         message: prices.errorMessage!,
         onRetry: () => prices.fetchAll(),
       );
     }
 
-    // ۳) نمایش داده‌ها
-    final bool isWide = constraints.maxWidth >= 720;
+    // ۳) نمایش داده‌ها — در نمایشگر عریض دو ستونه می‌شود
+    final bool isWide = constraints.maxWidth >= 700;
 
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-
-    final Widget goldCard = PriceCard(
-      title: 'انس طلا',
-      symbol: 'XAU / USD',
-      icon: Icons.currency_exchange,
-      unit: 'دلار آمریکا برای هر اونس',
-      data: prices.gold,
-      containerColor: scheme.primaryContainer,
-      onContainerColor: scheme.onPrimaryContainer,
-    );
-
-    final Widget brentCard = PriceCard(
-      title: 'نفت برنت',
-      symbol: 'BRENT CRUDE / USD',
-      icon: Icons.oil_barrel_outlined,
-      unit: 'دلار آمریکا برای هر بشکه',
-      data: prices.brent,
-      containerColor: scheme.secondaryContainer,
-      onContainerColor: scheme.onSecondaryContainer,
-    );
-
-    // در نمایشگرهای عریض (تبلت/افقی) کارت‌ها کنار هم قرار می‌گیرند
-    final List<Widget> cards = isWide
-        ? <Widget>[
-            Expanded(child: goldCard),
-            const SizedBox(width: 16),
-            Expanded(child: brentCard),
-          ]
-        : <Widget>[
-            goldCard,
-            const SizedBox(height: 16),
-            brentCard,
-          ];
+    final List<Widget> cards = <Widget>[];
+    for (int i = 0; i < prices.items.length; i++) {
+      cards.add(PriceCard(
+        price: prices.items[i],
+        accentPink: i.isEven,
+      ));
+    }
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(minHeight: constraints.maxHeight),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: <Widget>[
-              // اگر داده‌های قبلی موجودند ولی آپدیت جدید شکست خورده،
-              // هشدار ملایم بالای صفحه نشان داده می‌شود
-              if (prices.errorMessage != null)
-                _partialErrorBanner(context, prices.errorMessage!),
-              Flex(
-                direction: isWide ? Axis.horizontal : Axis.vertical,
-                mainAxisSize: MainAxisSize.min,
-                children: cards,
-              ),
-              const SizedBox(height: 28),
-              _buildLastUpdated(prices),
-              const SizedBox(height: 6),
-              Text(
-                'بروزرسانی خودکار هر ۳۰ ثانیه انجام می‌شود',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: scheme.onSurface.withOpacity(0.5),
-                    ),
-              ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: Column(
+          children: <Widget>[
+            _buildFantasyBanner(context),
+
+            // هشدار ملایم وقتی داده قبلی نمایش داده می‌شود ولی آپدیت شکست خورده
+            if (prices.errorMessage != null) ...<Widget>[
               const SizedBox(height: 12),
+              _partialErrorBanner(context, prices.errorMessage!, onBg),
             ],
-          ),
+
+            const SizedBox(height: 8),
+            if (isWide)
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 2.8,
+                children: cards,
+              )
+            else
+              Column(
+                children: <Widget>[
+                  for (int i = 0; i < cards.length; i++) ...<Widget>[
+                    if (i > 0) const SizedBox(height: 12),
+                    cards[i],
+                  ],
+                ],
+              ),
+
+            const SizedBox(height: 24),
+            _buildLastUpdated(prices, onBg),
+            const SizedBox(height: 6),
+            Text(
+              'بروزرسانی خودکار هر ۳۰ ثانیه — منبع: tala.ir',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: onBg.withOpacity(0.6),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
         ),
       ),
     );
   }
 
-  /// بنر هشدار برای حالتی که داده‌های قبلی نمایش داده می‌شوند
-  /// ولی آپدیت تازه ناموفق بوده است
-  Widget _partialErrorBanner(BuildContext context, String message) {
-    final ColorScheme scheme = Theme.of(context).colorScheme;
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer.withOpacity(0.55),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
+  /// بنر فانتزی: تصویر اگری و الاغ + عنوان اپ
+  Widget _buildFantasyBanner(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Stack(
+        fit: StackFit.passthrough,
         children: <Widget>[
-          Icon(Icons.wifi_off, size: 18, color: scheme.onErrorContainer),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              '$message — قیمت‌ها ممکن است قدیمی باشند.',
-              style: TextStyle(
-                fontSize: 13,
-                color: scheme.onErrorContainer,
+          Image.asset(
+            'assets/images/ogre_donkey.jpg',
+            height: 190,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+          // گرادیان پایین بنر برای خوانایی متن
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: <Color>[
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.55),
+                  ],
+                  stops: const <double>[0.45, 1.0],
+                ),
               ),
+            ),
+          ),
+          Positioned(
+            right: 16,
+            bottom: 12,
+            left: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text(
+                  'قیمت لحظه‌ای طلا و نفت',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'در دنیای فانتزی اگری و الاغش',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -172,13 +212,42 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// ردیف زمان آخرین بروزرسانی موفق
-  Widget _buildLastUpdated(PricesProvider prices) {
-    final DateTime? time = prices.lastUpdated;
-    if (time == null) return const SizedBox.shrink();
+  /// بنر هشدار برای حالتی که داده‌های قبلی نمایش داده می‌شوند
+  /// ولی آپدیت تازه ناموفق بوده است
+  Widget _partialErrorBanner(BuildContext context, String message, Color onBg) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.deepOrange.withOpacity(0.22),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.deepOrangeAccent.withOpacity(0.45)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Icon(Icons.wifi_off, size: 18, color: onBg),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              '$message — قیمت‌ها ممکن است قدیمی باشند.',
+              style: TextStyle(fontSize: 13, color: onBg),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ردیف زمان آخرین بروزرسانی (زمان شمسی از خود tala.ir)
+  Widget _buildLastUpdated(PricesProvider prices, Color onBg) {
+    final String? jdate = prices.jdate;
+    if (jdate == null || jdate.isEmpty) return const SizedBox.shrink();
     return Text(
-      'آخرین بروزرسانی: ${Formatters.clock(time)}',
-      style: const TextStyle(fontSize: 14),
+      'آخرین بروزرسانی سایت: $jdate',
+      style: TextStyle(
+        fontSize: 14,
+        color: onBg.withOpacity(0.85),
+      ),
     );
   }
 }

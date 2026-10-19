@@ -12,7 +12,7 @@ void main() {
   runApp(const GoldOilPriceApp());
 }
 
-/// ریشه اپلیکیشن: ثبت Providerها، پیکربندی تم و لوکال فارسی
+/// ریشه اپلیکیشن: ثبت Providerها، پیکربندی تم فانتزی و لوکال فارسی
 class GoldOilPriceApp extends StatelessWidget {
   const GoldOilPriceApp({super.key, this.pricesProvider, this.themeProvider});
 
@@ -30,7 +30,8 @@ class GoldOilPriceApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<PricesProvider>(
           create: (BuildContext context) {
-            final PricesProvider provider = pricesProvider ?? PricesProvider();
+            final PricesProvider provider =
+                pricesProvider ?? PricesProvider();
             // فقط در اجرای واقعی: دریافت اولین داده + شروع آپدیت خودکار
             if (pricesProvider == null) {
               provider.fetchAll();

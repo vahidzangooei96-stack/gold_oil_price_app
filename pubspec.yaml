@@ -28,6 +28,9 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
+  assets:
+    - assets/images/ogre_donkey.jpg
+
   # فونت فارسی وزیرمتن (مجوز OFL در پوشه assets/fonts)
   fonts:
     - family: Vazirmatn

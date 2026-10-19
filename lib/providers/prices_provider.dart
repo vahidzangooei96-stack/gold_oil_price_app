@@ -8,26 +8,24 @@ import '../services/api_service.dart';
 
 /// مدیریت State قیمت‌ها با Provider (الگوی ChangeNotifier)
 ///
-/// وظایف این کلاس:
-/// - دریافت قیمت طلا و نفت از [ApiService]
+/// - دریافت قیمت‌های صفحه اصلی tala.ir
 /// - آپدیت خودکار هر ۳۰ ثانیه
 /// - نمایش وضعیت بارگذاری و پیام خطای فارسی
-/// - توقف/ادامه آپدیت بر اساس چرخه حیات اپ (بهینه‌سازی باتری و دیتا)
+/// - توقف/ادامه آپدیت بر اساس چرخه حیات اپ (بهینه‌سازی باتری)
 class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
-  PricesProvider({ApiService? apiService}) : _api = apiService ?? ApiService() {
+  PricesProvider({TalaService? talaService}) : _api = talaService ?? TalaService() {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  final ApiService _api;
+  final TalaService _api;
   Timer? _timer;
   bool _isFetching = false;
-  String? _lastError;
 
-  /// قیمت انس طلا (XAU/USD)
-  PriceData? gold;
+  /// لیست قیمت‌ها (null یعنی هنوز دریافت اولیه انجام نشده)
+  List<TalaPrice> items = const <TalaPrice>[];
 
-  /// قیمت نفت برنت (Brent/USD)
-  PriceData? brent;
+  /// زمان شمسی آخرین بروزرسانی به‌صورت متن (از خود سایت)
+  String? jdate;
 
   /// آیا در حال بارگذاری هستیم؟ (بارگذاری اولیه یا رفرش دستی)
   bool isLoading = true;
@@ -35,17 +33,13 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// پیام خطای فارسی برای نمایش در UI (null یعنی بدون خطا)
   String? errorMessage;
 
-  /// زمان آخرین بروزرسانی موفق (برای نمایش پایین صفحه)
-  DateTime? lastUpdated;
-
   /// فاصله زمانی آپدیت خودکار قیمت‌ها
   static const Duration autoRefreshInterval = Duration(seconds: 30);
 
-  /// دریافت هم‌زمان قیمت طلا و نفت از دو منبع
+  /// دریافت قیمت‌ها از tala.ir
   ///
   /// اگر [showLoading] برابر true باشد، اسپینر بارگذاری نمایش داده می‌شود؛
-  /// برای آپدیت پس‌زمینه‌ای (تایمر و Pull-to-Refresh) از false استفاده کنید
-  /// تا پرش ناگهانی UI رخ ندهد.
+  /// برای آپدیت پس‌زمینه‌ای (تایمر و Pull-to-Refresh) از false استفاده کنید.
   Future<void> fetchAll({bool showLoading = true}) async {
     // جلوگیری از درخواست‌های هم‌زمان و هم‌پوشان
     if (_isFetching) return;
@@ -58,28 +52,16 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     try {
-      // هر دو درخواست موازی ارسال می‌شوند؛ شکست یکی، دیگری را خراب نمی‌کند
-      final List<double?> results =
-          await Future.wait<double?>(<Future<double?>>[
-        _safeFetch(_api.fetchGoldPrice),
-        _safeFetch(_api.fetchBrentPrice),
-      ]);
-
-      final double? goldPrice = results[0];
-      final double? brentPrice = results[1];
-
-      if (goldPrice == null && brentPrice == null) {
-        // هر دو درخواست شکست خوردند → وضعیت خطا نمایش داده می‌شود
-        errorMessage = _lastError ?? 'خطا در دریافت اطلاعات.';
-      } else {
-        errorMessage = null;
-        if (goldPrice != null) gold = _merge(gold, goldPrice);
-        if (brentPrice != null) brent = _merge(brent, brentPrice);
-        lastUpdated = DateTime.now();
-      }
-
+      final TalaSnapshot snapshot = await _api.fetchPrices();
+      items = snapshot.items;
+      jdate = snapshot.jdate;
+      errorMessage = null;
       isLoading = false;
       notifyListeners();
+    } on ApiException catch (e) {
+      _handleError(e.message);
+    } catch (_) {
+      _handleError('خطا در دریافت اطلاعات؛ اتصال اینترنت را بررسی کنید.');
     } finally {
       _isFetching = false;
     }
@@ -96,25 +78,11 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   // ─────────────────────────── Private ───────────────────────────
 
-  /// ساخت نسخه جدید [PriceData] با حفظ قیمت قبلی (برای نشان افزایش/کاهش)
-  PriceData _merge(PriceData? previous, double newPrice) => PriceData(
-        price: newPrice,
-        previousPrice: previous?.price,
-        updatedAt: DateTime.now(),
-      );
-
-  /// اجرای یک درخواست با مهار خطا؛ به‌جای پرتاب استثنا null برمی‌گرداند
-  /// و پیام خطا را ذخیره می‌کند تا UI قربانی یک منبع خراب نشود.
-  Future<double?> _safeFetch(Future<double> Function() request) async {
-    try {
-      return await request();
-    } on ApiException catch (e) {
-      _lastError = e.message;
-      return null;
-    } catch (_) {
-      _lastError = 'خطا در دریافت اطلاعات؛ اتصال اینترنت را بررسی کنید.';
-      return null;
-    }
+  void _handleError(String message) {
+    isLoading = false;
+    // اگر داده قبلی موجود است فقط خطا را نشان بده، داده‌ها را پاک نکن
+    errorMessage = message;
+    notifyListeners();
   }
 
   // ───────────────────── چرخه حیات اپلیکیشن ─────────────────────
