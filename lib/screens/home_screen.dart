@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/prices_provider.dart';
 import '../providers/theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../utils/formatters.dart';
 import '../widgets/price_card.dart';
 import '../widgets/status_views.dart';
 
@@ -135,8 +136,8 @@ class HomeScreen extends StatelessWidget {
               ),
 
             const SizedBox(height: 24),
-            _buildLastUpdated(prices, onBg),
-            const SizedBox(height: 6),
+            _buildFreshnessPanel(prices, onBg),
+            const SizedBox(height: 8),
             Text(
               'بروزرسانی خودکار هر ۳۰ ثانیه — منبع: tala.ir',
               textAlign: TextAlign.center,
@@ -238,16 +239,92 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  /// ردیف زمان آخرین بروزرسانی (زمان شمسی از خود tala.ir)
-  Widget _buildLastUpdated(PricesProvider prices, Color onBg) {
-    final String? jdate = prices.jdate;
-    if (jdate == null || jdate.isEmpty) return const SizedBox.shrink();
-    return Text(
-      'آخرین بروزرسانی سایت: $jdate',
-      style: TextStyle(
-        fontSize: 14,
-        color: onBg.withOpacity(0.85),
+  /// پنل تازگی داده: نشانه می‌دهد که اپ واقعاً هر ۳۰ ثانیه
+  /// در حال گرفتن تازه‌ترین داده‌ها است:
+  ///  ۱) ساعت آخرین دریافت موفق (ساعت دستگاه)
+  ///  ۲) سن داده نسبت به مُهر زمانی خود سرور (مثل نمایش سایت)
+  ///  ۳) شمارش معکوس و نوار پیشرفت تا رفرش بعدی
+  Widget _buildFreshnessPanel(PricesProvider prices, Color onBg) {
+    final bool fresh = !prices.isStale && prices.lastFetchAt != null;
+    final Color dotColor = fresh ? Colors.lightGreenAccent : Colors.orangeAccent;
+
+    final String? ageText = _dataAgeText(prices);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: (isPanelDark(onBg) ? Colors.white : Colors.deepPurple).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: onBg.withOpacity(0.15)),
+      ),
+      child: Column(
+        children: <Widget>[
+          // ردیف ۱: آخرین دریافت موفق + چراغ وضعیت تازگی
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(Icons.verified, size: 16, color: dotColor),
+              const SizedBox(width: 6),
+              Text(
+                prices.lastFetchAt == null
+                    ? 'در انتظار اولین دریافت...'
+                    : 'آخرین دریافت: ${Formatters.clock(prices.lastFetchAt!)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: onBg.withOpacity(0.9),
+                ),
+              ),
+            ],
+          ),
+          // ردیف ۲: سن داده از دید سرور
+          if (ageText != null) ...<Widget>[
+            const SizedBox(height: 4),
+            Text(
+              'سن داده: $ageText',
+              style: TextStyle(
+                fontSize: 12,
+                color: onBg.withOpacity(0.7),
+              ),
+            ),
+          ],
+          const SizedBox(height: 10),
+          // نوار پیشرفت + شمارش معکوس تا رفرش بعدی
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: 1 - prices.secondsToNextRefresh / PricesProvider.autoRefreshSeconds,
+              minHeight: 5,
+              backgroundColor: onBg.withOpacity(0.15),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                fresh ? AppTheme.seedPink : Colors.orangeAccent,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'رفرش بعدی تا ${Formatters.toPersianDigits('${prices.secondsToNextRefresh}')} ثانیه',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: onBg.withOpacity(0.75),
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  /// متن «سن داده» مثل سایت: چند ثانیه/دقیقه پیش
+  String? _dataAgeText(PricesProvider prices) {
+    final int? age = prices.dataAgeSeconds;
+    if (age == null) return null;
+    if (age < 60) return '${Formatters.toPersianDigits('$age')} ثانیه پیش';
+    final int minutes = age ~/ 60;
+    return '${Formatters.toPersianDigits('$minutes')} دقیقه پیش';
+  }
+
+  /// تشخیص متن پنل: اگر رنگ متن روشن باشد یعنی پس‌زمینه تاریک است
+  bool isPanelDark(Color onBg) => onBg.computeLuminance() > 0.5;
 }

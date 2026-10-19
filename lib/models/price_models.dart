@@ -26,10 +26,14 @@ class TalaPrice {
 
 /// یک اسنپ‌شات کامل از قیمت‌های سایت طلا
 class TalaSnapshot {
-  const TalaSnapshot({required this.items, this.jdate});
+  const TalaSnapshot({required this.items, this.jdate, this.feedTimeMs});
 
   final List<TalaPrice> items;
 
   /// زمان شمسی آخرین بروزرسانی به‌صورت متن، مانند «18:14 1405/07/27»
   final String? jdate;
+
+  /// مُهر زمانی (میلی‌ثانیه) خودِ داده از سرور؛ برای محاسبه «سن داده»
+  /// دقیقاً مثل سایت که از فیلد m استفاده می‌کند.
+  final int? feedTimeMs;
 }

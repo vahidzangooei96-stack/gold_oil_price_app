@@ -40,16 +40,28 @@ class TalaService {
   /// حداکثر زمان انتظار برای درخواست
   static const Duration _timeout = Duration(seconds: 15);
 
-  static final Uri _priceUri = Uri.parse('https://www.tala.ir/ajax/price');
+  /// آدرس endpoint قیمت‌ها (بدون پارامتر؛ کش‌باستر در هر درخواست اضافه می‌شود)
+  static const String _priceUrl = 'https://www.tala.ir/ajax/price';
 
-  /// هدرهای شبیه مرورگر؛ سرور درخواست AJAX بدون این هدرها را رد می‌کند
+  /// هدرهای شبیه مرورگر؛ سرور درخواست AJAX بدون این هدرها را رد می‌کند.
+  /// هدرهای no-cache تضمین می‌کنند هیچ پروکسی/ISP‌ای پاسخ کش‌شده ندهد.
   static const Map<String, String> _headers = <String, String>{
     'Accept': 'application/json, text/javascript, */*; q=0.01',
     'X-Requested-With': 'XMLHttpRequest',
     'Referer': 'https://www.tala.ir/',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
     'User-Agent':
-        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldPriceApp/1.1',
+        'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 GoldPriceApp/1.2',
   };
+
+  /// ساخت آدرس درخواست با پارامتر کش‌باستر متغیر در هر لحظه؛
+  /// این کار مطمئن می‌شود همیشه تازه‌ترین داده از سرور اصلی tala.ir
+  /// دریافت می‌شود، نه پاسخ کش‌شده‌ی مسیرهای میانی.
+  static Uri _freshUri() {
+    final int bust = DateTime.now().millisecondsSinceEpoch;
+    return Uri.parse('$_priceUrl?_=$bust');
+  }
 
   /// همان قیمت‌هایی که در صفحه اصلی tala.ir نمایش داده می‌شوند
   static const List<PriceRowConfig> _rows = <PriceRowConfig>[
@@ -68,10 +80,11 @@ class TalaService {
 
   /// دریافت همه قیمت‌ها در یک درخواست
   Future<TalaSnapshot> fetchPrices() async {
-    final Map<String, dynamic> data = await _getJson(_priceUri);
+    final Map<String, dynamic> data = await _getJson(_freshUri());
 
     final List<TalaPrice> rows = <TalaPrice>[];
     String? jdate;
+    int? feedTimeMs; // بزرگ‌ترین m یعنی تازه‌ترین مُهر زمانی داده سرور
 
     for (final PriceRowConfig cfg in _rows) {
       final dynamic section = data[cfg.section];
@@ -80,6 +93,12 @@ class TalaService {
       if (item is! Map<String, dynamic>) continue;
 
       jdate ??= (item['jdate'] as String?);
+      final int? m = int.tryParse('${item['m'] ?? ''}');
+      if (m != null && m > 1000000000) {
+        // فیلد m بر حسب ثانیه است؛ به میلی‌ثانیه تبدیل می‌کنیم
+        final int ms = m * 1000;
+        feedTimeMs = (feedTimeMs == null || ms > feedTimeMs) ? ms : feedTimeMs;
+      }
 
       rows.add(TalaPrice(
         title: cfg.title,
@@ -94,7 +113,11 @@ class TalaService {
       throw const ApiException('قیمتی در پاسخ سرور یافت نشد.');
     }
 
-    return TalaSnapshot(items: rows, jdate: jdate);
+    return TalaSnapshot(
+      items: rows,
+      jdate: jdate,
+      feedTimeMs: feedTimeMs,
+    );
   }
 
   /// آزادسازی منابع شبکه
@@ -131,12 +154,16 @@ class TalaService {
 
   /// قالب‌بندی مقدار قیمت؛ اگر عدد قابل خواندن باشد با قالب فارسی زیبا
   /// نمایش داده می‌شود، وگرنه همان متن سایت (v_fa) برمی‌گردد.
+  ///
+  /// مقدار صفر یا منفی (ناشی از بسته بودن بازار یا ناسازگاری لحظه‌ای
+  /// فید سرور) به‌جای نمایش عدد گمراه‌کننده، با «—» نمایش داده می‌شود.
   String _formatValue(Map<String, dynamic> item) {
     final String? raw = (item['v'] ?? item['v_fa'])?.toString();
     if (raw == null || raw.isEmpty) return '—';
     final String cleaned = raw.replaceAll(',', '').trim();
     final double? num = double.tryParse(cleaned);
     if (num == null) return raw; // مقدار غیرعددی: همان متن اصلی
+    if (num <= 0) return '—'; // قیمت صفر/منفی معنا ندارد
     return Formatters.price(num);
   }
 
