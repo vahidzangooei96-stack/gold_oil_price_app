@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../models/price_models.dart';
 import '../utils/formatters.dart';
 import 'api_service.dart';
 
