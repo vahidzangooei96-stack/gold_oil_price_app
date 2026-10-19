@@ -26,8 +26,9 @@ class ApiService {
   /// حداکثر زمان انتظار برای هر درخواست
   static const Duration _timeout = Duration(seconds: 15);
 
-  static const Uri _goldUri = Uri.parse('https://xaus.com/api/v1/spot');
-  static const Uri _brentUri =
+  // نکته: Uri.parse متد است نه constructor ثابت؛ پس باید final باشد نه const
+  static final Uri _goldUri = Uri.parse('https://xaus.com/api/v1/spot');
+  static final Uri _brentUri =
       Uri.parse('https://americasoilwatch.com/api/v1/brent');
 
   /// هدر User-Agent واقعی‌نما؛ بعضی سرورها (پشت Cloudflare) درخواست‌های
