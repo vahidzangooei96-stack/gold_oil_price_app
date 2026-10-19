@@ -166,7 +166,7 @@ class TgjuSource extends MarketSource {
   String? _changeText(Map<String, dynamic> item) {
     final double? dp = _parseNumber(item['dp']);
     if (dp == null || dp == 0) return null;
-    return '${Formatters.toPersianDigits(dp.toStringAsFixed(2))}٪';
+    return '${Formatters.toPersianDigits(dp.toStringAsFixed(2)).replaceAll('.', '٫')}٪';
   }
 
   /// جهت تغییر از فیلد dt: high = صعودی، low = نزولی

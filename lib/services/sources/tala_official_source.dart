@@ -276,7 +276,7 @@ class TalaOfficialSource extends MarketSource {
       'change_percent', 'percent', 'dp', 'changePercent',
     ]);
     if (pct == null || pct == 0) return null;
-    return '${Formatters.toPersianDigits(pct.abs().toStringAsFixed(2))}٪';
+    return '${Formatters.toPersianDigits(pct.abs().toStringAsFixed(2)).replaceAll('.', '٫')}٪';
   }
 
   /// جهت تغییر از فیلدهای احتمالی

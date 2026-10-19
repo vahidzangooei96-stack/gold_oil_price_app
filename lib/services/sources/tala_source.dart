@@ -189,7 +189,7 @@ class TalaSource extends MarketSource {
     final Match? m = RegExp(r'\(([^)]+)\)').firstMatch(d);
     final String? pct = m?.group(1);
     if (pct == null || pct.trim().isEmpty) return null;
-    return Formatters.toPersianDigits(pct.trim());
+    return Formatters.toPersianDigits(pct.trim()).replaceAll('.', '٫');
   }
 
   /// تشخیص جهت تغییر از علامتِ ابتدای متن d

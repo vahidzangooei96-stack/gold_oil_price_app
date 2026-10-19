@@ -119,8 +119,8 @@ class YahooService {
     final dynamic pct = meta['regularMarketChangePercent'];
     if (pct is num) {
       final double p = pct.toDouble();
-      final String abs =
-          Formatters.toPersianDigits(p.abs().toStringAsFixed(2));
+      final String abs = Formatters.toPersianDigits(p.abs().toStringAsFixed(2))
+          .replaceAll('.', '٫');
       changeText = '$abs٪';
       isUp = p >= 0;
     }
