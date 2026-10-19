@@ -149,8 +149,9 @@ class TgjuSource extends MarketSource {
       throw const ApiException('پاسخ TGJU معتبر نبود.');
     } on ApiException {
       rethrow;
-    } catch (_) {
-      throw const ApiException('خطای نامشخص در دریافت اطلاعات.');
+    } catch (Object e) {
+      // پیام دیاگنوستیک: نوع و متن خطای اصلی برای ردیابی سریع
+      throw ApiException('خطای نامشخص در دریافت اطلاعات: [${e.runtimeType}] $e');
     }
   }
 
