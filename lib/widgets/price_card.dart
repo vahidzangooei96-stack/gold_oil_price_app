@@ -3,42 +3,42 @@ import 'package:flutter/material.dart';
 import '../models/price_models.dart';
 import '../theme/app_theme.dart';
 
-/// کارت فانتزی نمایش قیمت — حباب‌های گرد با حاشیه صورتی/آبی متناوب
+/// کارت لوکس نمایش قیمت — قاب طلایی روی مشکی امپراتوری
 class PriceCard extends StatelessWidget {
-  const PriceCard({
-    super.key,
-    required this.price,
-    this.accentPink = true,
-  });
+  const PriceCard({super.key, required this.price});
 
   final TalaPrice price;
-
-  /// رنگ حاشیه کارت: صورتی یا آبی (به‌صورت متناوب برای تنوع بصری)
-  final bool accentPink;
 
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final bool isDark = theme.brightness == Brightness.dark;
 
-    final Color accent =
-        accentPink ? AppTheme.seedPink : AppTheme.skyBlue;
-
-    // رنگ متن روی کارت
-    final Color valueColor = isDark ? Colors.white : const Color(0xFF3A1C52);
+    // رنگ‌های متن روی کارت
+    final Color valueColor = isDark ? AppTheme.goldLight : AppTheme.bronzeDark;
     final Color titleColor =
-        isDark ? Colors.white.withOpacity(0.95) : const Color(0xFF5A2E77);
+        isDark ? AppTheme.ivory.withOpacity(0.92) : AppTheme.bronzeDark;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.07) : Colors.white.withOpacity(0.80),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: accent.withOpacity(0.55), width: 1.3),
+        gradient: isDark
+            ? const LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: <Color>[Color(0xFF1C170D), Color(0xFF131009)],
+              )
+            : const LinearGradient(
+                begin: Alignment.topRight,
+                end: Alignment.bottomLeft,
+                colors: <Color>[AppTheme.cardLight, Color(0xFFF7EFDC)],
+              ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.gold.withOpacity(0.55), width: 1),
         boxShadow: <BoxShadow>[
           BoxShadow(
-            color: accent.withOpacity(isDark ? 0.15 : 0.20),
-            blurRadius: 14,
+            color: Colors.black.withOpacity(isDark ? 0.45 : 0.10),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -47,23 +47,23 @@ class PriceCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          // ── ردیف بالا: ستاره فانتزی + عنوان + نشان تغییر ──
+          // ── ردیف بالا: نشان سکه طلایی + عنوان + نشان تغییر ──
           Row(
             children: <Widget>[
               Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
-                    colors: <Color>[AppTheme.seedPink, AppTheme.skyBlue],
+                    colors: AppTheme.goldGradient,
                   ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  accentPink ? Icons.auto_awesome : Icons.star_rounded,
-                  color: Colors.white,
-                  size: 16,
+                  Icons.workspace_premium_outlined,
+                  color: isDark ? const Color(0xFF14110B) : Colors.white,
+                  size: 15,
                 ),
               ),
               const SizedBox(width: 10),
@@ -76,12 +76,12 @@ class PriceCard extends StatelessWidget {
                   ),
                 ),
               ),
-              _buildChangeChip(theme),
+              _buildChangeChip(),
             ],
           ),
           const SizedBox(height: 10),
 
-          // ── قیمت با فونت بزرگ ──
+          // ── قیمت با فونت بزرگ طلایی ──
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: AlignmentDirectional.centerStart,
@@ -100,7 +100,7 @@ class PriceCard extends StatelessWidget {
           Text(
             price.unit,
             style: theme.textTheme.bodySmall?.copyWith(
-              color: titleColor.withOpacity(0.65),
+              color: titleColor.withOpacity(0.6),
             ),
           ),
         ],
@@ -109,20 +109,21 @@ class PriceCard extends StatelessWidget {
   }
 
   /// نشان درصد تغییر (سبز = افزایش، قرمز = کاهش)
-  Widget _buildChangeChip(ThemeData theme) {
+  Widget _buildChangeChip() {
     final String? change = price.changeText;
     if (change == null) return const SizedBox.shrink();
 
     final bool? up = price.isUp;
     if (up == null) return const SizedBox.shrink();
 
-    final Color color = up ? const Color(0xFF27AE60) : const Color(0xFFE74C3C);
+    final Color color = up ? AppTheme.gain : AppTheme.loss;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withOpacity(0.14),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

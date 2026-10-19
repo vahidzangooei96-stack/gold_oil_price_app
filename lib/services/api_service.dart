@@ -19,12 +19,21 @@ class ApiException implements Exception {
 
 /// پیکربندی یک ردیف قیمت: از کدام بخش و کلید JSON بخوانیم و چه نامی بگذاریم
 class PriceRowConfig {
-  const PriceRowConfig(this.section, this.key, this.title, this.unit);
+  const PriceRowConfig(
+    this.section,
+    this.key,
+    this.title,
+    this.unit, {
+    this.group = 'global',
+  });
 
   final String section;
   final String key;
   final String title;
   final String unit;
+
+  /// گروه نمایشی: «global»، «oil» یا «iran»
+  final String group;
 }
 
 /// سرویس دریافت قیمت‌ها از سایت طلا (tala.ir)
@@ -63,19 +72,25 @@ class TalaService {
     return Uri.parse('$_priceUrl?_=$bust');
   }
 
-  /// همان قیمت‌هایی که در صفحه اصلی tala.ir نمایش داده می‌شوند
+  /// قیمت‌های صفحه اصلی tala.ir؛ گروه‌بندی‌شده برای نمایش بخشی:
+  /// بازار جهانی ← بازار ایران ← نفت (پشتیبان برنت وقتی یاهو در دسترس نباشد)
   static const List<PriceRowConfig> _rows = <PriceRowConfig>[
-    PriceRowConfig('gold', 'gold_ounce', 'اونس طلا', 'دلار برای هر اونس'),
-    PriceRowConfig('gold', 'gold_bazaruser', 'مثقال ۱۷', 'تومان'),
-    PriceRowConfig('gold', 'gold_18k', 'طلای ۱۸ عیار', 'تومان'),
-    PriceRowConfig('gold', 'gold_24k', 'طلای ۲۴ عیار', 'تومان'),
-    PriceRowConfig('sekke', 'sekke-jad', 'سکه امامی', 'تومان'),
-    PriceRowConfig('sekke', 'sekke-nim', 'نیم سکه', 'تومان'),
-    PriceRowConfig('sekke', 'sekke-rob', 'ربع سکه', 'تومان'),
-    PriceRowConfig('sekke', 'sekke-grm', 'سکه گرمی', 'تومان'),
-    PriceRowConfig('sekke', 'sekke-mazane', 'ارزش طلای سکه', 'تومان'),
-    PriceRowConfig('other', 'other_oil', 'نفت برنت', 'دلار برای هر بشکه'),
-    PriceRowConfig('other', 'other_silver', 'نقره جهانی', 'دلار برای هر اونس'),
+    PriceRowConfig('gold', 'gold_ounce', 'اونس جهانی طلا', 'دلار برای هر اونس',
+        group: 'global'),
+    PriceRowConfig('other', 'other_silver', 'نقره جهانی', 'دلار برای هر اونس',
+        group: 'global'),
+    PriceRowConfig('gold', 'gold_bazaruser', 'مثقال طلا', 'تومان',
+        group: 'iran'),
+    PriceRowConfig('gold', 'gold_18k', 'طلای ۱۸ عیار', 'تومان برای هر گرم',
+        group: 'iran'),
+    PriceRowConfig('gold', 'gold_24k', 'طلای ۲۴ عیار', 'تومان برای هر گرم',
+        group: 'iran'),
+    PriceRowConfig('sekke', 'sekke-jad', 'سکه امامی', 'تومان', group: 'iran'),
+    PriceRowConfig('sekke', 'sekke-nim', 'نیم سکه', 'تومان', group: 'iran'),
+    PriceRowConfig('sekke', 'sekke-rob', 'ربع سکه', 'تومان', group: 'iran'),
+    PriceRowConfig('sekke', 'sekke-grm', 'سکه گرمی', 'تومان', group: 'iran'),
+    PriceRowConfig('other', 'other_oil', 'نفت برنت', 'دلار برای هر بشکه',
+        group: 'oil'),
   ];
 
   /// دریافت همه قیمت‌ها در یک درخواست
@@ -106,6 +121,7 @@ class TalaService {
         unit: cfg.unit,
         changeText: _changePercent(item['d'] as String?),
         isUp: _direction(item['d'] as String?),
+        group: cfg.group,
       ));
     }
 

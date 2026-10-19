@@ -54,7 +54,7 @@ class _AppView extends StatelessWidget {
     final ThemeMode themeMode = context.watch<ThemeProvider>().themeMode;
 
     return MaterialApp(
-      title: 'قیمت لحظه‌ای طلا و نفت',
+      title: 'امپراتوری طلا و نفت',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

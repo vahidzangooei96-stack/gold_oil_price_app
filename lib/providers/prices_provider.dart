@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../models/price_models.dart';
 import '../services/api_service.dart';
+import '../services/yahoo_service.dart';
 
 /// مدیریت State قیمت‌ها با Provider (الگوی ChangeNotifier)
 ///
@@ -14,11 +15,14 @@ import '../services/api_service.dart';
 /// - درخواست‌ها همیشه با کش‌باستر ارسال می‌شوند تا پاسخ کش‌شده نیاید
 /// - توقف/ادامه آپدیت بر اساس چرخه حیات اپ (بهینه‌سازی باتری)
 class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
-  PricesProvider({TalaService? talaService}) : _api = talaService ?? TalaService() {
+  PricesProvider({TalaService? talaService, YahooService? yahooService})
+      : _api = talaService ?? TalaService(),
+        _yahoo = yahooService ?? YahooService() {
     WidgetsBinding.instance.addObserver(this);
   }
 
   final TalaService _api;
+  final YahooService _yahoo;
 
   /// تیکر ۱ ثانیه‌ای برای شمارش معکوس و اجرای رفرش دوره‌ای
   Timer? _ticker;
@@ -26,7 +30,13 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
   /// جلوگیری از درخواست‌های هم‌زمان و هم‌پوشان
   bool _isFetching = false;
 
-  /// لیست قیمت‌ها (خالی یعنی هنوز دریافت اولیه انجام نشده)
+  /// لیست قیمت‌های خام tala.ir (قبل از ادغام با نفت یاهو)
+  List<TalaPrice> talaItems = const <TalaPrice>[];
+
+  /// لیست قیمت‌های نفت از یاهو (برنت و WTI)
+  List<TalaPrice> oilItems = const <TalaPrice>[];
+
+  /// لیست نهایی ترکیبی برای نمایش (همه گروه‌ها)
   List<TalaPrice> items = const <TalaPrice>[];
 
   /// زمان شمسی آخرین بروزرسانی به‌صورت متن (از خود سایت)
@@ -43,6 +53,9 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
 
   /// پیام خطای فارسی برای نمایش در UI (null یعنی بدون خطا)
   String? errorMessage;
+
+  /// خطای اختصاصی بخش نفت (وقتی فقط یاهو در دسترس نیست ولی بقیه داده داریم)
+  String? oilError;
 
   /// ثانیه‌های باقی‌مانده تا رفرش بعدی (شمارش معکوس زنده)
   int secondsToNextRefresh = autoRefreshSeconds;
@@ -72,8 +85,11 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
     return age < 0 ? 0 : age ~/ 1000;
   }
 
-  /// دریافت قیمت‌ها از tala.ir
+  /// دریافت قیمت‌ها از هر دو منبع به‌صورت موازی:
+  ///  ۱) tala.ir — اونس، نقره، طلا و سکه داخلی (و برنت پشتیبان)
+  ///  ۲) Yahoo Finance — برنت و WTI لحظه‌ای
   ///
+  /// خطای هر منبع مستقل مهار می‌شود تا شکست یکی، بقیه را از کار نیندازد.
   /// اگر [showLoading] برابر true باشد، اسپینر بارگذاری نمایش داده می‌شود؛
   /// برای آپدیت پس‌زمینه‌ای (تایمر و Pull-to-Refresh) از false استفاده کنید.
   Future<void> fetchAll({bool showLoading = true}) async {
@@ -88,23 +104,92 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
     }
 
     try {
-      final TalaSnapshot snapshot = await _api.fetchPrices();
-      items = snapshot.items;
-      jdate = snapshot.jdate;
-      feedTimeMs = snapshot.feedTimeMs;
+      final List<Object?> results = await Future.wait(<Future<Object?>>[
+        _api
+            .fetchPrices()
+            .then<Object?>((TalaSnapshot s) => s)
+            .catchError((Object e) => e),
+        _yahoo
+            .fetchOilQuotes()
+            .then<Object?>((List<TalaPrice> r) => r)
+            .catchError((Object e) => e),
+      ]);
+
+      final Object? talaRes = results[0];
+      final Object? oilRes = results[1];
+
+      // ── منبع اصلی: tala.ir ──
+      if (talaRes is TalaSnapshot) {
+        _applyTalaSnapshot(talaRes);
+      } else if (items.isEmpty && talaItems.isEmpty) {
+        // اولین دریافت هم شکست خورده → خطای کامل
+        final String msg = talaRes is ApiException
+            ? talaRes.message
+            : 'خطا در دریافت اطلاعات؛ اتصال اینترنت را بررسی کنید.';
+        _handleError(msg);
+        return;
+      } else {
+        // داده قبلی داریم؛ فقط هشدار بده
+        errorMessage = talaRes is ApiException
+            ? talaRes.message
+            : 'خطا در دریافت اطلاعات؛ اتصال اینترنت را بررسی کنید.';
+      }
+
+      // ── منبع نفت: یاهو، با پشتیبانِ برنتِ tala.ir ──
+      // اگر یاهو شکست بخورد، برنتِ tala.ir (گروه oil) به‌عنوان پشتیبان
+      // در _mergeItems باقی می‌ماند؛ پس فقط وقتی هیچ نفتی نبود خطا می‌دهیم.
+      if (oilRes is List<TalaPrice> && oilRes.isNotEmpty) {
+        oilItems = oilRes;
+        oilError = null;
+        // سن داده نفت از خود یاهو
+        final int? rmt = _yahoo.lastMarketTimeMs;
+        if (rmt != null && (feedTimeMs == null || rmt > feedTimeMs!)) {
+          feedTimeMs = rmt;
+        }
+      } else {
+        oilItems = const <TalaPrice>[];
+        oilError = talaItems.any((TalaPrice r) => r.group == 'oil')
+            ? null
+            : 'قیمت نفت جهانی موقتاً در دسترس نیست.';
+      }
+
+      // ترکیب نهایی ردیف‌ها
+      _mergeItems();
+
       lastFetchAt = DateTime.now();
-      errorMessage = null;
       isLoading = false;
       // دریافت موفق: شمارش معکوس از ۳۰ ثانیه از نو
       secondsToNextRefresh = autoRefreshSeconds;
       notifyListeners();
-    } on ApiException catch (e) {
-      _handleError(e.message);
     } catch (_) {
       _handleError('خطا در دریافت اطلاعات؛ اتصال اینترنت را بررسی کنید.');
     } finally {
       _isFetching = false;
     }
+  }
+
+  /// اعمال اسنپ‌شات tala.ir به فیلدها
+  void _applyTalaSnapshot(TalaSnapshot snapshot) {
+    talaItems = snapshot.items;
+    jdate = snapshot.jdate;
+    if (snapshot.feedTimeMs != null &&
+        (feedTimeMs == null || snapshot.feedTimeMs! > feedTimeMs!)) {
+      feedTimeMs = snapshot.feedTimeMs;
+    }
+    errorMessage = null;
+  }
+
+  /// ترکیب ردیف‌های tala و یاهو:
+  /// اگر یاهو برنت داد، برنتِ tala حذف می‌شود تا تکراری نشود؛
+  /// وگرنه برنتِ tala به‌عنوان پشتیبان در بخش نفت می‌ماند.
+  void _mergeItems() {
+    final bool yahooBrent =
+        oilItems.any((TalaPrice r) => r.title == 'نفت برنت');
+    final List<TalaPrice> rest = talaItems
+        .where((TalaPrice r) =>
+            r.group != 'oil' || !(yahooBrent && r.title == 'نفت برنت'))
+        .toList();
+    items = <TalaPrice>[...rest, ...oilItems];
   }
 
   /// شروع آپدیت خودکار: تیکر ۱ ثانیه‌ای که شمارش معکوس را کم می‌کند
@@ -162,6 +247,7 @@ class PricesProvider extends ChangeNotifier with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();
     _api.dispose();
+    _yahoo.dispose();
     super.dispose();
   }
 }

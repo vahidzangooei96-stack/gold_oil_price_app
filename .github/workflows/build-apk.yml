@@ -36,7 +36,7 @@ jobs:
           MANIFEST=android/app/src/main/AndroidManifest.xml
           grep -q 'android.permission.INTERNET' "$MANIFEST" || \
             sed -i 's#<application#<uses-permission android:name="android.permission.INTERNET"/>\n    <application#' "$MANIFEST"
-          sed -i 's#android:label="gold_oil_price"#android:label="قیمت طلا و نفت"#' "$MANIFEST"
+          sed -i 's#android:label="gold_oil_price"#android:label="امپراتوری طلا و نفت"#' "$MANIFEST"
 
       - name: Install dependencies
         run: flutter pub get
@@ -76,12 +76,12 @@ jobs:
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest apk/Gold-Oil-Price.apk \
-            --title "اپ قیمت طلا و نفت — نسخه ۱.۰ (اندروید)" \
+            --title "امپراتوری طلا و نفت — نسخه ۱.۲ (اندروید)" \
             --notes "نحوه نصب روی گوشی اندروید:
 
           1. فایل Gold-Oil-Price.apk را دانلود کنید.
           2. روی فایل بزنید؛ اگر پرسید، اجازه «نصب از منابع ناشناس» را بدهید.
-          3. اپ را باز کنید — قیمت انس طلا و نفت برنت هر ۳۰ ثانیه خودکار بروزرسانی می‌شود.
+          3. اپ را باز کنید — قیمت‌های tala.ir و یاهو فایننس هر ۳۰ ثانیه خودکار بروزرسانی می‌شوند.
 
           مشخصات:
           - Material 3 با حالت روشن و تاریک

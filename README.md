@@ -1,4 +1,4 @@
-# قیمت لحظه‌ای طلا و نفت برنت — Flutter
+# امپراتوری طلا و نفت — Flutter
 
 اپلیکیشن اندرویدی ساخته‌شده با **Flutter** و **Material 3** برای نمایش لحظه‌ای:
 
@@ -64,7 +64,8 @@ UI (HomeScreen / PriceCard)
 PricesProvider (ChangeNotifier)  ←  Timer هر ۳۰ ثانیه + Observer چرخه حیات
         │  fetch (موازی)
         ▼
-ApiService (http)  →  xaus.com (طلا)  +  americasoilwatch.com (برنت)
+TalaService (http)  →  tala.ir/ajax/price (اونس، طلا و سکه ایران، نقره)
+YahooService (http) →  query1.finance.yahoo.com  (برنت و WTI لحظه‌ای)
 ```
 
 - **UI** فقط با `context.watch` وضعیت را می‌خواند و با `context.read` اکشن صادر می‌کند.

@@ -1,7 +1,7 @@
 name: gold_oil_price
-description: "نمایش لحظه‌ای قیمت انس طلا (XAU/USD) و نفت برنت به دلار — Flutter + Material 3"
+description: "امپراتوری طلا و نفت — قیمت لحظه‌ای طلا و سکه ایران و نفت جهانی با تم لوکس سیاه-طلایی — Flutter + Material 3"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.2.0+3
 
 environment:
   sdk: '>=3.4.0 <4.0.0'
@@ -29,7 +29,7 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/ogre_donkey.jpg
+    - assets/images/lion_crest.jpg
 
   # فونت فارسی وزیرمتن (مجوز OFL در پوشه assets/fonts)
   fonts:

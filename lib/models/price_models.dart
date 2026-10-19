@@ -1,4 +1,4 @@
-/// مدل نمایشی هر ردیف قیمت دریافتی از tala.ir
+/// مدل نمایشی هر ردیف قیمت دریافتی از منابع داده
 class TalaPrice {
   const TalaPrice({
     required this.title,
@@ -6,6 +6,7 @@ class TalaPrice {
     required this.unit,
     this.changeText,
     this.isUp,
+    this.group = 'global',
   });
 
   /// عنوان فارسی، مانند «طلای ۱۸ عیار»
@@ -22,6 +23,10 @@ class TalaPrice {
 
   /// جهت تغییر: true = افزایش، false = کاهش، null = بدون تغییر
   final bool? isUp;
+
+  /// گروه نمایشی برای بخش‌بندی صفحه:
+  /// «global» بازار جهانی، «oil» نفت و انرژی، «iran» بازار ایران
+  final String group;
 }
 
 /// یک اسنپ‌شات کامل از قیمت‌های سایت طلا
