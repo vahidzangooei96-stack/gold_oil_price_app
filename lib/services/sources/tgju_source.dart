@@ -127,6 +127,33 @@ class TgjuSource extends MarketSource {
 
   // ─────────────────────────── Internal ───────────────────────────
 
+  /// دریافت و رمزگشایی پاسخ JSON با خطاهای فارسی
+  Future<Map<String, dynamic>> _getJson(Uri uri) async {
+    try {
+      final http.Response response =
+          await _client.get(uri, headers: _headers).timeout(_timeout);
+
+      if (response.statusCode != 200) {
+        throw ApiException('سرور TGJU با کد ${response.statusCode} پاسخ داد.');
+      }
+
+      final dynamic decoded = jsonDecode(utf8.decode(response.bodyBytes));
+      if (decoded is Map<String, dynamic>) return decoded;
+
+      throw const ApiException('ساختار پاسخ TGJU قابل خواندن نبود.');
+    } on SocketException {
+      throw const ApiException('اتصال اینترنت برقرار نیست.');
+    } on TimeoutException {
+      throw const ApiException('پاسخی از TGJU دریافت نشد (مهلت تمام شد).');
+    } on FormatException {
+      throw const ApiException('پاسخ TGJU معتبر نبود.');
+    } on ApiException {
+      rethrow;
+    } catch (_) {
+      throw const ApiException('خطای نامشخص در دریافت اطلاعات.');
+    }
+  }
+
   /// «۲۶۱٬۷۷۸٬۰۰۰» یا «4142.08» را به عدد تبدیل می‌کند
   double? _parseNumber(dynamic raw) {
     if (raw == null) return null;

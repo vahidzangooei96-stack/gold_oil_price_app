@@ -104,7 +104,11 @@ class TalaOfficialSource extends MarketSource {
       _assertSuccess(pricesEnvelope);
       _extractPrices(pricesEnvelope, refs, rows,
           onTimestamp: (int ms) {
-            if (feedTimeMs == null || ms > feedTimeMs) feedTimeMs = ms;
+            // مُهر تازه‌تر فقط وقتی جایگزین می‌شود که واقعاً بزرگ‌تر باشد
+            final int? current = feedTimeMs;
+            if (current == null || ms > current) {
+              feedTimeMs = ms;
+            }
           },
           onDateText: (String t) {
             jdate ??= t;

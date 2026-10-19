@@ -87,6 +87,8 @@ class HomeScreen extends StatelessWidget {
     BoxConstraints constraints,
     Color onBg,
   ) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     // ۱) بارگذاری اولیه
     if (prices.isLoading && prices.items.isEmpty) return const LoadingView();
 
