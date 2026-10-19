@@ -1,0 +1,39 @@
+name: gold_oil_price
+description: "نمایش لحظه‌ای قیمت انس طلا (XAU/USD) و نفت برنت به دلار — Flutter + Material 3"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.4.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # بومی‌سازی متن‌های Material و Cupertino به فارسی
+  flutter_localizations:
+    sdk: flutter
+
+  # درخواست‌های HTTP برای دریافت قیمت از APIها
+  http: ^1.2.2
+
+  # مدیریت State با الگوی ChangeNotifier
+  provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
+
+  # فونت فارسی وزیرمتن (مجوز OFL در پوشه assets/fonts)
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+        - asset: assets/fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Vazirmatn-Bold.ttf
+          weight: 700
